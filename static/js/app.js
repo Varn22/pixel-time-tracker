@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     loadUserData();
     loadCategories();
+    setupScreens();
 });
 
 // Инициализация приложения
@@ -22,24 +23,71 @@ function initializeApp() {
     updateDateTime();
     setInterval(updateDateTime, 1000);
     loadDailyStats();
-    setupScreens();
+}
+
+// Настройка экранов
+function setupScreens() {
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => {
+        screen.style.display = 'none';
+    });
+    document.getElementById('main-screen').style.display = 'block';
 }
 
 // Настройка обработчиков событий
 function setupEventListeners() {
     // Обработчики кнопок навигации
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', () => switchScreen(item.dataset.screen));
+        item.addEventListener('click', () => {
+            const screenId = item.dataset.screen;
+            switchScreen(screenId);
+            
+            // Обновляем активное состояние
+            document.querySelectorAll('.nav-item').forEach(navItem => {
+                navItem.classList.remove('active');
+            });
+            item.classList.add('active');
+        });
     });
 
     // Обработчики действий с задачами
-    document.getElementById('startTaskBtn').addEventListener('click', startTask);
-    document.getElementById('finishTaskBtn').addEventListener('click', finishTask);
-    document.getElementById('addTaskManually').addEventListener('click', showAddTaskModal);
+    const startTaskBtn = document.getElementById('startTaskBtn');
+    const finishTaskBtn = document.getElementById('finishTaskBtn');
+    const addTaskManuallyBtn = document.getElementById('addTaskManually');
+    
+    if (startTaskBtn) {
+        startTaskBtn.addEventListener('click', startTask);
+    }
+    
+    if (finishTaskBtn) {
+        finishTaskBtn.addEventListener('click', finishTask);
+    }
+    
+    if (addTaskManuallyBtn) {
+        addTaskManuallyBtn.addEventListener('click', showAddTaskModal);
+    }
 
     // Обработчики настроек
-    document.getElementById('themeSelect').addEventListener('change', updateTheme);
-    document.getElementById('notificationsToggle').addEventListener('change', updateNotifications);
+    const themeSelect = document.getElementById('themeSelect');
+    const notificationsToggle = document.getElementById('notificationsToggle');
+    
+    if (themeSelect) {
+        themeSelect.addEventListener('change', updateTheme);
+    }
+    
+    if (notificationsToggle) {
+        notificationsToggle.addEventListener('change', updateNotifications);
+    }
+
+    // Обработчик ввода задачи
+    const taskInput = document.getElementById('taskInput');
+    if (taskInput) {
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !currentActivity) {
+                startTask();
+            }
+        });
+    }
 }
 
 // Загрузка данных пользователя
@@ -54,9 +102,12 @@ async function loadUserData() {
         if (response.ok) {
             const userData = await response.json();
             updateUserInterface(userData);
+        } else {
+            showError('Ошибка загрузки данных пользователя');
         }
     } catch (error) {
         console.error('Ошибка при загрузке данных пользователя:', error);
+        showError('Ошибка загрузки данных пользователя');
     }
 }
 
@@ -90,18 +141,27 @@ function updateUserInterface(userData) {
 
     // Обновляем уровень и опыт
     if (userData.level) {
-        document.getElementById('userLevel').textContent = userData.level;
+        const userLevel = document.getElementById('userLevel');
+        if (userLevel) {
+            userLevel.textContent = userData.level;
+        }
         updateXPProgress(userData.xp);
     }
 
     // Обновляем настройки
     if (userData.theme) {
-        document.getElementById('themeSelect').value = userData.theme;
-        document.body.setAttribute('data-theme', userData.theme);
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect) {
+            themeSelect.value = userData.theme;
+            document.body.setAttribute('data-theme', userData.theme);
+        }
     }
     
     if (userData.notifications !== undefined) {
-        document.getElementById('notificationsToggle').checked = userData.notifications;
+        const notificationsToggle = document.getElementById('notificationsToggle');
+        if (notificationsToggle) {
+            notificationsToggle.checked = userData.notifications;
+        }
     }
 }
 
@@ -109,7 +169,10 @@ function updateUserInterface(userData) {
 function updateDateTime() {
     const now = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('currentDate').textContent = now.toLocaleDateString('ru-RU', options);
+    const currentDate = document.getElementById('currentDate');
+    if (currentDate) {
+        currentDate.textContent = now.toLocaleDateString('ru-RU', options);
+    }
     
     if (currentActivity) {
         seconds++;
@@ -123,14 +186,22 @@ function updateTimerDisplay() {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     
-    document.getElementById('timer').textContent = 
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const timerElement = document.getElementById('timer');
+    if (timerElement) {
+        timerElement.textContent = 
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
 }
 
 // Начало задачи
 async function startTask() {
-    const taskName = document.getElementById('taskInput').value;
-    const category = document.getElementById('categorySelect').value;
+    const taskInput = document.getElementById('taskInput');
+    const categorySelect = document.getElementById('categorySelect');
+    
+    if (!taskInput || !categorySelect) return;
+    
+    const taskName = taskInput.value.trim();
+    const category = categorySelect.value;
     
     if (!taskName) {
         showError('Введите название задачи');
@@ -155,12 +226,18 @@ async function startTask() {
         if (response.ok) {
             currentActivity = data;
             seconds = 0;
-            document.getElementById('startTaskBtn').classList.add('hidden');
-            document.getElementById('finishTaskBtn').classList.remove('hidden');
-            document.getElementById('taskInput').disabled = true;
-            document.getElementById('categorySelect').disabled = true;
+            const startTaskBtn = document.getElementById('startTaskBtn');
+            const finishTaskBtn = document.getElementById('finishTaskBtn');
+            
+            if (startTaskBtn) startTaskBtn.classList.add('hidden');
+            if (finishTaskBtn) finishTaskBtn.classList.remove('hidden');
+            
+            taskInput.disabled = true;
+            categorySelect.disabled = true;
+            
+            showError('Задача начата', 'success');
         } else {
-            showError(data.error);
+            showError(data.error || 'Ошибка при запуске задачи');
         }
     } catch (error) {
         showError('Ошибка при запуске задачи');
@@ -185,15 +262,25 @@ async function finishTask() {
         if (response.ok) {
             currentActivity = null;
             seconds = 0;
-            document.getElementById('timer').textContent = '00:00:00';
-            document.getElementById('startTaskBtn').classList.remove('hidden');
-            document.getElementById('finishTaskBtn').classList.add('hidden');
-            document.getElementById('taskInput').value = '';
-            document.getElementById('taskInput').disabled = false;
-            document.getElementById('categorySelect').disabled = false;
+            const timerElement = document.getElementById('timer');
+            const startTaskBtn = document.getElementById('startTaskBtn');
+            const finishTaskBtn = document.getElementById('finishTaskBtn');
+            const taskInput = document.getElementById('taskInput');
+            const categorySelect = document.getElementById('categorySelect');
+            
+            if (timerElement) timerElement.textContent = '00:00:00';
+            if (startTaskBtn) startTaskBtn.classList.remove('hidden');
+            if (finishTaskBtn) finishTaskBtn.classList.add('hidden');
+            if (taskInput) {
+                taskInput.value = '';
+                taskInput.disabled = false;
+            }
+            if (categorySelect) categorySelect.disabled = false;
+            
             loadDailyStats();
+            showError('Задача завершена', 'success');
         } else {
-            showError(data.error);
+            showError(data.error || 'Ошибка при завершении задачи');
         }
     } catch (error) {
         showError('Ошибка при завершении задачи');
@@ -213,15 +300,20 @@ async function loadDailyStats() {
         
         if (response.ok) {
             updateActivityChart(data.hours, data.durations);
+        } else {
+            showError('Ошибка загрузки статистики');
         }
     } catch (error) {
         console.error('Ошибка при загрузке статистики:', error);
+        showError('Ошибка загрузки статистики');
     }
 }
 
 // Обновление графика активности
 function updateActivityChart(hours, durations) {
     const chartContainer = document.getElementById('activityChart');
+    if (!chartContainer) return;
+    
     chartContainer.innerHTML = '';
     
     const maxDuration = Math.max(...durations, 60); // Минимальная высота для пустых столбцов
@@ -247,15 +339,15 @@ function updateActivityChart(hours, durations) {
 
 // Переключение экранов
 function switchScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.remove('active');
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => {
+        screen.style.display = 'none';
     });
-    document.getElementById(`${screenId}-screen`).classList.add('active');
     
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    document.querySelector(`[data-screen="${screenId}"]`).classList.add('active');
+    const targetScreen = document.getElementById(`${screenId}-screen`);
+    if (targetScreen) {
+        targetScreen.style.display = 'block';
+    }
 }
 
 // Обновление темы
@@ -270,6 +362,9 @@ function updateTheme(event) {
             'X-User-Id': tg.initDataUnsafe.user.id.toString()
         },
         body: JSON.stringify({ theme })
+    }).catch(error => {
+        console.error('Ошибка при обновлении темы:', error);
+        showError('Ошибка при обновлении темы');
     });
 }
 
@@ -284,14 +379,21 @@ function updateNotifications(event) {
             'X-User-Id': tg.initDataUnsafe.user.id.toString()
         },
         body: JSON.stringify({ notifications })
+    }).catch(error => {
+        console.error('Ошибка при обновлении настроек:', error);
+        showError('Ошибка при обновлении настроек');
     });
 }
 
 // Отображение ошибки
-function showError(message) {
+function showError(message, type = 'error') {
     const errorDiv = document.getElementById('error');
+    if (!errorDiv) return;
+    
     errorDiv.textContent = message;
+    errorDiv.className = `error-message ${type}`;
     errorDiv.classList.remove('hidden');
+    
     setTimeout(() => {
         errorDiv.classList.add('hidden');
     }, 3000);
@@ -322,15 +424,20 @@ async function loadCategories() {
         
         if (response.ok) {
             updateCategorySelect(data);
+        } else {
+            showError('Ошибка загрузки категорий');
         }
     } catch (error) {
         console.error('Ошибка при загрузке категорий:', error);
+        showError('Ошибка загрузки категорий');
     }
 }
 
 // Обновление выпадающего списка категорий
 function updateCategorySelect(categories) {
     const select = document.getElementById('categorySelect');
+    if (!select) return;
+    
     select.innerHTML = '';
     
     const defaultOption = document.createElement('option');
@@ -350,10 +457,16 @@ function updateCategorySelect(categories) {
 
 // Показать модальное окно добавления задачи
 function showAddTaskModal() {
-    document.getElementById('addTaskModal').classList.remove('hidden');
+    const modal = document.getElementById('addTaskModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
 }
 
 // Закрыть модальное окно
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.add('hidden');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
 } 
