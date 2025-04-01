@@ -2,34 +2,204 @@
 
 :root {
     --primary-color: #4a90e2;
-    --secondary-color: #50e3c2;
-    --background-color: #1a1a1a;
-    --text-color: #ffffff;
-    --box-background: #2a2a2a;
-    --accent-color: #ff6b6b;
+    --secondary-color: #f39c12;
+    --background-color: #f5f6fa;
+    --text-color: #2c3e50;
+    --card-background: #ffffff;
+    --border-color: #dcdde1;
+    --success-color: #2ecc71;
+    --warning-color: #f1c40f;
+    --error-color: #e74c3c;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    image-rendering: pixelated;
 }
 
 body {
-    margin: 0;
-    padding: 0;
     font-family: 'Press Start 2P', cursive;
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .container {
-    max-width: 800px;
-    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 20px;
 }
 
+/* Навигация */
+.navbar {
+    background-color: var(--card-background);
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-brand {
+    font-size: 1.2rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pixel-icon {
+    font-size: 1.5rem;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.nav-link {
+    color: var(--text-color);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Карточки */
+.card {
+    background-color: var(--card-background);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+/* Кнопки */
+.btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #357abd;
+    transform: translateY(-2px);
+}
+
+/* Формы */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.8rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Анимации */
+@keyframes pixelate {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .nav-links {
+        gap: 0.5rem;
+    }
+    
+    .nav-link {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Футер */
+.footer {
+    background-color: var(--card-background);
+    padding: 1rem;
+    text-align: center;
+    margin-top: 2rem;
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Утилиты */
+.text-center {
+    text-align: center;
+}
+
+.mt-2 {
+    margin-top: 1rem;
+}
+
+.mb-2 {
+    margin-bottom: 1rem;
+}
+
+/* Градиенты */
+.gradient-primary {
+    background: linear-gradient(45deg, var(--primary-color), #357abd);
+}
+
+.gradient-success {
+    background: linear-gradient(45deg, var(--success-color), #27ae60);
+}
+
+/* Эффекты */
+.hover-effect {
+    transition: all 0.3s ease;
+}
+
+.hover-effect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
 .pixel-box {
-    background-color: var(--box-background);
+    background-color: var(--card-background);
     border: 4px solid var(--primary-color);
     padding: 20px;
     margin: 20px 0;
@@ -68,7 +238,7 @@ body {
 }
 
 .pixel-input {
-    background-color: #1a1a1a;
+    background-color: var(--card-background);
     border: 2px solid var(--primary-color);
     padding: 12px;
     color: var(--text-color);
@@ -81,7 +251,7 @@ body {
 .pixel-input:focus {
     outline: none;
     border-color: var(--secondary-color);
-    box-shadow: 0 0 10px rgba(80, 227, 194, 0.3);
+    box-shadow: 0 0 10px rgba(243, 156, 18, 0.3);
 }
 
 .pixel-button {
@@ -116,7 +286,7 @@ body {
 .pixel-timer {
     font-size: 36px;
     color: var(--secondary-color);
-    text-shadow: 0 0 10px rgba(80, 227, 194, 0.5);
+    text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
     margin-bottom: 20px;
 }
 
@@ -151,7 +321,7 @@ body {
 
 .pixel-achievement:hover {
     transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(80, 227, 194, 0.5);
+    box-shadow: 0 0 15px rgba(243, 156, 18, 0.5);
 }
 
 .pixel-stats-container {
@@ -166,7 +336,7 @@ body {
 }
 
 .pixel-stat-box {
-    background-color: #1a1a1a;
+    background-color: var(--card-background);
     border: 2px solid var(--secondary-color);
     padding: 15px;
     text-align: center;
@@ -175,7 +345,7 @@ body {
 
 .pixel-stat-box:hover {
     transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(80, 227, 194, 0.3);
+    box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
 }
 
 .pixel-stat-box h3 {
@@ -201,8 +371,8 @@ body {
 }
 
 .pixel-category-box {
-    background-color: #1a1a1a;
-    border: 2px solid var(--accent-color);
+    background-color: var(--card-background);
+    border: 2px solid var(--primary-color);
     padding: 10px;
     text-align: center;
     transition: all 0.3s ease;
@@ -210,13 +380,13 @@ body {
 
 .pixel-category-box:hover {
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+    box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3);
 }
 
 .pixel-category-box h4 {
     font-size: 10px;
     margin-bottom: 5px;
-    color: var(--accent-color);
+    color: var(--primary-color);
 }
 
 .pixel-category-box p {
