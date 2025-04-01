@@ -6,8 +6,8 @@ SQLAlchemy==1.4.23
 gunicorn==21.2.0
 psycopg2-binary==2.9.9
 Werkzeug==2.0.1
-pandas==2.0.0
-numpy>=1.24.0
+numpy==1.23.5
+pandas==1.5.3
 pytz>=2020.1
 python-dateutil>=2.8.2
 openpyxl>=3.0.10
