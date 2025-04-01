@@ -28,7 +28,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///pixel_tracker
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
-    'pool_recycle': 300
+    'pool_recycle': 300,
+    'pool_size': 5,
+    'max_overflow': 10
 }
 
 db = SQLAlchemy(app)
@@ -137,9 +139,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         db.session.commit()
     
     # Создаем кнопку для веб-приложения
+    webapp_url = os.getenv('WEBAPP_URL', 'https://pixel-time-tracker.onrender.com')
     webapp_button = KeyboardButton(
         text="Открыть трекер ⏱",
-        web_app=WebAppInfo(url=os.getenv('WEBAPP_URL'))
+        web_app=WebAppInfo(url=webapp_url)
     )
     keyboard = ReplyKeyboardMarkup([[webapp_button]], resize_keyboard=True)
     
@@ -226,7 +229,11 @@ def get_user():
         if not user_data:
             return jsonify({'error': 'No user data'}), 400
             
-        user = json.loads(user_data)
+        try:
+            user = json.loads(user_data)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+            
         telegram_id = user.get('id')
         
         if not telegram_id:
@@ -412,11 +419,18 @@ def finish_activity():
 def update_theme():
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
         user_data = data.get('user')
         if not user_data:
             return jsonify({'error': 'No user data'}), 400
             
-        user = json.loads(user_data)
+        try:
+            user = json.loads(user_data) if isinstance(user_data, str) else user_data
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+            
         telegram_id = user.get('id')
         
         if not telegram_id:

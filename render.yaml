@@ -17,8 +17,13 @@ services:
         fromDatabase:
           name: pixel_tracker_db
           property: connectionString
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: 0
 
 databases:
   - name: pixel_tracker_db
     databaseName: pixel_tracker
-    user: pixel_tracker_user 
+    user: pixel_tracker_user
+    plan: free 
