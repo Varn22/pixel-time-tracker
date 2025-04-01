@@ -44,9 +44,12 @@ class Achievement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(200))
-    earned_at = db.Column(db.DateTime, default=datetime.now)
-    icon = db.Column(db.String(50))
+    description = db.Column(db.String(200), nullable=False)
+    icon = db.Column(db.String(50), nullable=False)
+    earned_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Achievement {self.name}>'
 
 # Инициализация бота Telegram
 bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
@@ -131,7 +134,7 @@ def stop_tracking():
         user.total_time += track.duration
         
         # Проверяем достижения
-        check_achievements(user)
+        check_achievements(user_id)
         
         db.session.commit()
         
@@ -188,22 +191,91 @@ def get_daily_stats(user_id):
         'track_count': len(tracks)
     }
 
-def check_achievements(user):
-    # Проверяем достижение "Мастер времени"
-    if user.total_time >= 360000:  # 100 часов
-        achievement = Achievement.query.filter_by(
-            user_id=user.id,
-            name='Профессионал'
-        ).first()
-        if not achievement.earned_at:
-            achievement.earned_at = datetime.now()
-            db.session.commit()
-            
-            # Отправляем уведомление о достижении
-            asyncio.run(bot.send_message(
-                chat_id=user.telegram_id,
-                text=f'🎉 Поздравляем! Вы получили достижение "{achievement.name}"!\n{achievement.description}'
-            ))
+def check_achievements(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return
+
+    # Получаем все достижения пользователя
+    user_achievements = {a.name for a in Achievement.query.filter_by(user_id=user_id).all()}
+    
+    # Получаем статистику пользователя
+    total_time = TimeTrack.query.filter_by(user_id=user_id).with_entities(
+        db.func.sum(TimeTrack.duration).label('total')
+    ).scalar() or 0
+    
+    total_activities = TimeTrack.query.filter_by(user_id=user_id).count()
+    unique_activities = TimeTrack.query.filter_by(user_id=user_id).with_entities(
+        TimeTrack.activity
+    ).distinct().count()
+    
+    # Проверяем достижения
+    achievements_to_add = []
+    
+    # Достижение за общее время
+    if total_time >= 3600 and 'time_master' not in user_achievements:  # 1 час
+        achievements_to_add.append(Achievement(
+            user_id=user_id,
+            name='time_master',
+            description='Отслежено более 1 часа активности',
+            icon='⏰'
+        ))
+    
+    # Достижение за количество активностей
+    if total_activities >= 10 and 'activity_king' not in user_achievements:
+        achievements_to_add.append(Achievement(
+            user_id=user_id,
+            name='activity_king',
+            description='Создано 10 активностей',
+            icon='👑'
+        ))
+    
+    # Достижение за разнообразие
+    if unique_activities >= 5 and 'diversity_expert' not in user_achievements:
+        achievements_to_add.append(Achievement(
+            user_id=user_id,
+            name='diversity_expert',
+            description='5 разных типов активностей',
+            icon='🎯'
+        ))
+    
+    # Достижение за регулярность
+    if total_activities >= 5:
+        recent_activities = TimeTrack.query.filter_by(user_id=user_id).order_by(
+            TimeTrack.start_time.desc()
+        ).limit(5).all()
+        
+        if len(recent_activities) >= 5:
+            dates = [a.start_time.date() for a in recent_activities]
+            if len(set(dates)) >= 5 and 'regular_tracker' not in user_achievements:
+                achievements_to_add.append(Achievement(
+                    user_id=user_id,
+                    name='regular_tracker',
+                    description='Активность в течение 5 дней подряд',
+                    icon='📅'
+                ))
+    
+    # Достижение за длительную сессию
+    if total_time >= 7200 and 'marathon_runner' not in user_achievements:  # 2 часа
+        achievements_to_add.append(Achievement(
+            user_id=user_id,
+            name='marathon_runner',
+            description='Отслежено более 2 часов активности',
+            icon='🏃'
+        ))
+    
+    # Добавляем новые достижения
+    for achievement in achievements_to_add:
+        db.session.add(achievement)
+    
+    db.session.commit()
+    
+    # Отправляем уведомления о новых достижениях
+    for achievement in achievements_to_add:
+        asyncio.run(bot.send_message(
+            chat_id=user.telegram_id,
+            text=f"🏆 Новое достижение!\n{achievement.icon} {achievement.description}"
+        ))
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
@@ -249,6 +321,31 @@ async def webhook():
             )
     
     return jsonify({'status': 'ok'})
+
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    achievements = Achievement.query.filter_by(user_id=user.id).all()
+    
+    # Получаем статистику
+    total_time = TimeTrack.query.filter_by(user_id=user.id).with_entities(
+        db.func.sum(TimeTrack.duration).label('total')
+    ).scalar() or 0
+    
+    total_activities = TimeTrack.query.filter_by(user_id=user.id).count()
+    unique_activities = TimeTrack.query.filter_by(user_id=user.id).with_entities(
+        TimeTrack.activity
+    ).distinct().count()
+    
+    return render_template('profile.html',
+                         user=user,
+                         achievements=achievements,
+                         total_time=total_time,
+                         total_activities=total_activities,
+                         unique_activities=unique_activities)
 
 if __name__ == '__main__':
     with app.app_context():
