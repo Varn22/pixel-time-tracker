@@ -24,13 +24,20 @@ database_url = os.getenv('DATABASE_URL')
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
+# Добавляем обработку SSL для Render
+if database_url:
+    database_url += '?sslmode=require'
+
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///pixel_tracker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
     'pool_size': 5,
-    'max_overflow': 10
+    'max_overflow': 10,
+    'connect_args': {
+        'sslmode': 'require'
+    } if database_url else {}
 }
 
 db = SQLAlchemy(app)
@@ -109,17 +116,24 @@ class Achievement(db.Model):
 
 def init_db():
     with app.app_context():
-        db.create_all()
-        # Создаем категории по умолчанию для каждого пользователя
-        users = User.query.all()
-        default_categories = ['Работа', 'Учеба', 'Отдых', 'Спорт', 'Другое']
-        for user in users:
-            existing_categories = [cat.name for cat in user.categories]
-            for category_name in default_categories:
-                if category_name not in existing_categories:
-                    category = Category(name=category_name, user_id=user.id)
-                    db.session.add(category)
-        db.session.commit()
+        try:
+            db.create_all()
+            logger.info("Database initialized successfully")
+            
+            # Создаем категории по умолчанию для каждого пользователя
+            users = User.query.all()
+            default_categories = ['Работа', 'Учеба', 'Отдых', 'Спорт', 'Другое']
+            for user in users:
+                existing_categories = [cat.name for cat in user.categories]
+                for category_name in default_categories:
+                    if category_name not in existing_categories:
+                        category = Category(name=category_name, user_id=user.id)
+                        db.session.add(category)
+            db.session.commit()
+            logger.info("Default categories created")
+        except Exception as e:
+            logger.error(f"Error initializing database: {str(e)}")
+            raise
 
 # Обработчики команд Telegram
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -224,7 +238,6 @@ def index():
 @app.route('/api/user', methods=['GET'])
 def get_user():
     try:
-        # Получаем данные из Telegram WebApp
         user_data = request.args.get('user')
         if not user_data:
             return jsonify({'error': 'No user data'}), 400
@@ -239,29 +252,40 @@ def get_user():
         if not telegram_id:
             return jsonify({'error': 'No Telegram ID'}), 400
         
-        db_user = User.query.filter_by(telegram_id=telegram_id).first()
-        if not db_user:
-            db_user = User(
-                telegram_id=telegram_id,
-                username=user.get('username'),
-                first_name=user.get('first_name'),
-                last_name=user.get('last_name')
-            )
-            db.session.add(db_user)
-            db.session.commit()
-        
-        return jsonify({
-            'id': db_user.id,
-            'username': db_user.username,
-            'first_name': db_user.first_name,
-            'last_name': db_user.last_name,
-            'level': db_user.level,
-            'xp': db_user.xp,
-            'theme': db_user.theme,
-            'notifications': db_user.notifications,
-            'daily_goal': db_user.daily_goal,
-            'break_reminder': db_user.break_reminder
-        })
+        try:
+            db_user = User.query.filter_by(telegram_id=telegram_id).first()
+            if not db_user:
+                db_user = User(
+                    telegram_id=telegram_id,
+                    username=user.get('username'),
+                    first_name=user.get('first_name'),
+                    last_name=user.get('last_name')
+                )
+                db.session.add(db_user)
+                db.session.commit()
+                
+                # Создаем категории по умолчанию для нового пользователя
+                default_categories = ['Работа', 'Учеба', 'Отдых', 'Спорт', 'Другое']
+                for category_name in default_categories:
+                    category = Category(name=category_name, user_id=db_user.id)
+                    db.session.add(category)
+                db.session.commit()
+            
+            return jsonify({
+                'id': db_user.id,
+                'username': db_user.username,
+                'first_name': db_user.first_name,
+                'last_name': db_user.last_name,
+                'level': db_user.level,
+                'xp': db_user.xp,
+                'theme': db_user.theme,
+                'notifications': db_user.notifications,
+                'daily_goal': db_user.daily_goal,
+                'break_reminder': db_user.break_reminder
+            })
+        except Exception as e:
+            logger.error(f"Database error in get_user: {str(e)}")
+            return jsonify({'error': 'Database error'}), 500
     except Exception as e:
         logger.error(f"Error in get_user: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -558,4 +582,6 @@ if __name__ == '__main__':
     flask_thread.start()
     
     # Запускаем бота в основном потоке
-    run_bot() 
+    run_bot()
+else:
+    init_db()  # Инициализируем базу данных при запуске через gunicorn 
