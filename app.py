@@ -8,6 +8,7 @@ from telegram import Bot, Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarku
 from telegram.ext import Application, CommandHandler, ContextTypes
 import asyncio
 import threading
+import json
 
 load_dotenv()
 
@@ -203,125 +204,197 @@ def index():
 
 @app.route('/api/user', methods=['GET'])
 def get_user():
-    telegram_id = request.args.get('telegram_id')
-    if not telegram_id:
-        return jsonify({'error': 'Telegram ID is required'}), 400
-    
-    user = User.query.filter_by(telegram_id=telegram_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'created_at': user.created_at.isoformat()
-    })
+    try:
+        # Получаем данные из Telegram WebApp
+        init_data = request.headers.get('X-Telegram-Init-Data')
+        if not init_data:
+            return jsonify({'error': 'No Telegram init data'}), 400
+            
+        # Парсим данные пользователя из init_data
+        user_data = request.args.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            db_user = User(
+                telegram_id=telegram_id,
+                username=user.get('username'),
+                first_name=user.get('first_name'),
+                last_name=user.get('last_name')
+            )
+            db.session.add(db_user)
+            db.session.commit()
+        
+        return jsonify({
+            'id': db_user.id,
+            'username': db_user.username,
+            'first_name': db_user.first_name,
+            'last_name': db_user.last_name,
+            'level': db_user.level,
+            'xp': db_user.xp,
+            'theme': db_user.theme,
+            'notifications': db_user.notifications,
+            'daily_goal': db_user.daily_goal,
+            'break_reminder': db_user.break_reminder
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stats/categories', methods=['GET'])
 def get_categories():
-    telegram_id = request.args.get('telegram_id')
-    if not telegram_id:
-        return jsonify({'error': 'Telegram ID is required'}), 400
-    
-    user = User.query.filter_by(telegram_id=telegram_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    categories = Category.query.filter_by(user_id=user.id).all()
-    return jsonify([{
-        'id': cat.id,
-        'name': cat.name,
-        'created_at': cat.created_at.isoformat()
-    } for cat in categories])
+    try:
+        user_data = request.args.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        categories = Category.query.filter_by(user_id=db_user.id).all()
+        return jsonify([{
+            'id': cat.id,
+            'name': cat.name,
+            'created_at': cat.created_at.isoformat()
+        } for cat in categories])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stats/daily', methods=['GET'])
 def get_daily_stats():
-    telegram_id = request.args.get('telegram_id')
-    if not telegram_id:
-        return jsonify({'error': 'Telegram ID is required'}), 400
-    
-    user = User.query.filter_by(telegram_id=telegram_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    today = datetime.now(pytz.UTC).date()
-    activities = Activity.query.filter(
-        Activity.user_id == user.id,
-        db.func.date(Activity.start_time) == today
-    ).all()
-    
-    stats = {
-        'total_time': 0,
-        'categories': {}
-    }
-    
-    for activity in activities:
-        if activity.end_time:
-            duration = (activity.end_time - activity.start_time).total_seconds() / 60  # в минутах
-            stats['total_time'] += duration
-            category_name = activity.category.name
-            if category_name not in stats['categories']:
-                stats['categories'][category_name] = 0
-            stats['categories'][category_name] += duration
-    
-    return jsonify(stats)
+    try:
+        user_data = request.args.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        today = datetime.now(pytz.UTC).date()
+        activities = Activity.query.filter(
+            Activity.user_id == db_user.id,
+            db.func.date(Activity.start_time) == today
+        ).all()
+        
+        stats = {
+            'total_time': 0,
+            'categories': {}
+        }
+        
+        for activity in activities:
+            if activity.end_time:
+                duration = (activity.end_time - activity.start_time).total_seconds() / 60
+                stats['total_time'] += duration
+                category_name = activity.category.name
+                if category_name not in stats['categories']:
+                    stats['categories'][category_name] = 0
+                stats['categories'][category_name] += duration
+        
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/activity/start', methods=['POST'])
 def start_activity():
-    data = request.get_json()
-    telegram_id = data.get('telegram_id')
-    category_id = data.get('category_id')
-    
-    if not telegram_id or not category_id:
-        return jsonify({'error': 'Telegram ID and category ID are required'}), 400
-    
-    user = User.query.filter_by(telegram_id=telegram_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    category = Category.query.get(category_id)
-    if not category or category.user_id != user.id:
-        return jsonify({'error': 'Category not found'}), 404
-    
-    activity = Activity(
-        user_id=user.id,
-        category_id=category_id,
-        start_time=datetime.now(pytz.UTC)
-    )
-    db.session.add(activity)
-    db.session.commit()
-    
-    return jsonify({
-        'id': activity.id,
-        'start_time': activity.start_time.isoformat()
-    })
+    try:
+        data = request.get_json()
+        user_data = data.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        category_id = data.get('category_id')
+        
+        if not telegram_id or not category_id:
+            return jsonify({'error': 'Telegram ID and category ID are required'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        category = Category.query.get(category_id)
+        if not category or category.user_id != db_user.id:
+            return jsonify({'error': 'Category not found'}), 404
+        
+        activity = Activity(
+            user_id=db_user.id,
+            category_id=category_id,
+            name=data.get('name', 'Новая активность'),
+            start_time=datetime.now(pytz.UTC)
+        )
+        db.session.add(activity)
+        db.session.commit()
+        
+        return jsonify({
+            'id': activity.id,
+            'start_time': activity.start_time.isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/activity/finish', methods=['POST'])
 def finish_activity():
-    data = request.get_json()
-    telegram_id = data.get('telegram_id')
-    activity_id = data.get('activity_id')
-    
-    if not telegram_id or not activity_id:
-        return jsonify({'error': 'Telegram ID and activity ID are required'}), 400
-    
-    user = User.query.filter_by(telegram_id=telegram_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    activity = Activity.query.get(activity_id)
-    if not activity or activity.user_id != user.id:
-        return jsonify({'error': 'Activity not found'}), 404
-    
-    activity.end_time = datetime.now(pytz.UTC)
-    db.session.commit()
-    
-    return jsonify({
-        'id': activity.id,
-        'end_time': activity.end_time.isoformat()
-    })
+    try:
+        data = request.get_json()
+        user_data = data.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        activity_id = data.get('activity_id')
+        
+        if not telegram_id or not activity_id:
+            return jsonify({'error': 'Telegram ID and activity ID are required'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        activity = Activity.query.get(activity_id)
+        if not activity or activity.user_id != db_user.id:
+            return jsonify({'error': 'Activity not found'}), 404
+        
+        activity.end_time = datetime.now(pytz.UTC)
+        activity.duration = (activity.end_time - activity.start_time).total_seconds()
+        activity.notes = data.get('notes')
+        activity.productivity = data.get('productivity')
+        
+        # Добавляем XP за завершенную активность
+        xp = int(activity.duration / 60)  # 1 XP за каждую минуту
+        db_user.add_xp(xp)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'id': activity.id,
+            'end_time': activity.end_time.isoformat(),
+            'duration': activity.duration,
+            'xp_earned': xp
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def run_flask():
     """Запуск Flask приложения"""

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Time Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -11,175 +12,198 @@
     <div class="app-container">
         <!-- Боковая навигация -->
         <nav class="sidebar">
-            <div class="nav-items">
-                <button class="nav-item active" data-screen="main">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Главная</span>
-                </button>
-                <button class="nav-item" data-screen="stats">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Статистика</span>
-                </button>
-                <button class="nav-item" data-screen="profile">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Профиль</span>
-                </button>
-                <button class="nav-item" data-screen="settings">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span>Настройки</span>
-                </button>
+            <div class="nav-item active" data-screen="dashboard">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                </svg>
+            </div>
+            <div class="nav-item" data-screen="timer">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/>
+                </svg>
+            </div>
+            <div class="nav-item" data-screen="stats">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+            </div>
+            <div class="nav-item" data-screen="settings">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.39-.29-.61-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.23-.08-.49 0-.61.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.39.29.61.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.23.08.49 0 .61-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
             </div>
         </nav>
 
         <!-- Основной контент -->
         <main class="main-content">
-            <!-- Главный экран -->
-            <div class="screen active" id="main-screen">
-                <header class="welcome-header">
-                    <h1>Pixel Time Tracker</h1>
-                    <div class="user-info">
-                        <span id="username" class="username"></span>
-                        <span id="currentDate" class="current-date"></span>
+            <!-- Приветствие -->
+            <header class="welcome-header">
+                <div class="user-info">
+                    <img src="" alt="Avatar" class="user-avatar" id="userAvatar">
+                    <div>
+                        <h2 id="username">Загрузка...</h2>
+                        <p id="userLevel">Уровень: <span>1</span></p>
                     </div>
-                </header>
+                </div>
+                <div class="xp-progress">
+                    <div class="progress-bar">
+                        <div class="progress" id="xpProgress"></div>
+                    </div>
+                    <p>XP: <span id="userXP">0</span> / <span id="nextLevelXP">100</span></p>
+                </div>
+            </header>
 
-                <section class="current-task">
-                    <h2>Текущая задача</h2>
-                    <div class="task-input-group">
-                        <input type="text" id="taskInput" placeholder="Введите название задачи">
-                        <select id="categorySelect">
-                            <option value="work">Работа</option>
-                            <option value="study">Учеба</option>
-                            <option value="hobby">Хобби</option>
-                            <option value="other">Другое</option>
-                        </select>
+            <!-- Дашборд -->
+            <div class="screen" id="dashboard">
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/>
+                            </svg>
+                            Время сегодня
+                        </h3>
+                        <div class="stat-value" id="todayTime">0ч 0м</div>
                     </div>
-                    <div class="timer-display">
-                        <div id="timer">00:00:00</div>
+                    <div class="stat-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            </svg>
+                            Активностей
+                        </h3>
+                        <div class="stat-value" id="todayActivities">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                            </svg>
+                            Продуктивность
+                        </h3>
+                        <div class="stat-value" id="productivity">0%</div>
+                    </div>
+                </div>
+
+                <div class="timer-container">
+                    <h3>Текущая задача</h3>
+                    <form class="task-form" id="taskForm">
+                        <div class="form-group">
+                            <label for="taskInput">Название задачи</label>
+                            <input type="text" id="taskInput" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categorySelect">Категория</label>
+                            <select id="categorySelect" required>
+                                <option value="">Выберите категорию</option>
+                            </select>
+                        </div>
+                        <div class="timer-display" id="timer">00:00:00</div>
                         <div class="timer-controls">
-                            <button id="startTaskBtn" class="primary-button">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                            <button type="button" class="timer-button start-button" id="startTimer">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z"/>
                                 </svg>
                                 Начать
                             </button>
-                            <button id="finishTaskBtn" class="secondary-button hidden">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            <button type="button" class="timer-button finish-button" id="finishTimer" disabled>
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M6 4h12v2H6z"/>
                                 </svg>
                                 Завершить
                             </button>
                         </div>
+                    </form>
+                </div>
+
+                <div class="activity-chart">
+                    <h3>Активность за неделю</h3>
+                    <div class="chart-container" id="weeklyChart">
+                        <!-- График будет добавлен через JavaScript -->
                     </div>
-                </section>
-
-                <section class="activity-chart">
-                    <h2>Активность за сегодня</h2>
-                    <div class="chart-container" id="activityChart"></div>
-                </section>
-
-                <button id="addTaskManually" class="floating-button">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+                </div>
             </div>
 
-            <!-- Экран статистики -->
-            <div class="screen" id="stats-screen">
-                <h2>Статистика</h2>
+            <!-- Таймер -->
+            <div class="screen hidden" id="timer">
+                <div class="timer-container">
+                    <h3>Таймер</h3>
+                    <div class="timer-display" id="timerDisplay">00:00:00</div>
+                    <div class="timer-controls">
+                        <button class="timer-button start-button" id="timerStart">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Старт
+                        </button>
+                        <button class="timer-button finish-button" id="timerStop" disabled>
+                            <svg viewBox="0 0 24 24">
+                                <path d="M6 4h12v2H6z"/>
+                            </svg>
+                            Стоп
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="screen hidden" id="stats">
                 <div class="stats-container">
-                    <div class="stats-card">
-                        <h3>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
-                            </svg>
-                            За сегодня
-                        </h3>
-                        <div id="todayStats"></div>
+                    <div class="stat-card">
+                        <h3>Общее время</h3>
+                        <div class="stat-value" id="totalTime">0ч 0м</div>
                     </div>
-                    <div class="stats-card">
-                        <h3>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                            </svg>
-                            За неделю
-                        </h3>
-                        <div id="weekStats"></div>
+                    <div class="stat-card">
+                        <h3>Всего задач</h3>
+                        <div class="stat-value" id="totalTasks">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Средняя продуктивность</h3>
+                        <div class="stat-value" id="avgProductivity">0%</div>
+                    </div>
+                </div>
+
+                <div class="activity-chart">
+                    <h3>Активность по категориям</h3>
+                    <div class="chart-container" id="categoryChart">
+                        <!-- График будет добавлен через JavaScript -->
                     </div>
                 </div>
             </div>
 
-            <!-- Экран профиля -->
-            <div class="screen" id="profile-screen">
-                <div class="profile-container">
-                    <div class="profile-header">
-                        <div class="profile-avatar">
-                            <img id="userAvatar" src="" alt="Аватар">
-                        </div>
-                        <div class="profile-info">
-                            <h2 id="profileUsername"></h2>
-                            <div class="level-info">
-                                <span>Уровень: <span id="userLevel">1</span></span>
-                                <div class="xp-bar">
-                                    <div id="xpProgress" class="xp-progress"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="achievements-section">
-                        <h3>Достижения</h3>
-                        <div id="achievementsList" class="achievements-grid"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Экран настроек -->
-            <div class="screen" id="settings-screen">
-                <h2>Настройки</h2>
+            <!-- Настройки -->
+            <div class="screen hidden" id="settings">
                 <div class="settings-container">
-                    <div class="settings-group">
-                        <h3>Внешний вид</h3>
-                        <div class="setting-item">
-                            <label for="themeSelect">Тема</label>
-                            <select id="themeSelect">
-                                <option value="light">Светлая</option>
-                                <option value="dark">Темная</option>
-                            </select>
-                        </div>
+                    <div class="setting-item">
+                        <label for="themeSwitch">Темная тема</label>
+                        <label class="theme-switch">
+                            <input type="checkbox" id="themeSwitch">
+                            <span class="theme-slider"></span>
+                        </label>
                     </div>
-                    <div class="settings-group">
-                        <h3>Уведомления</h3>
-                        <div class="setting-item">
-                            <label for="notificationsToggle">Уведомления</label>
-                            <input type="checkbox" id="notificationsToggle">
-                        </div>
-                        <div class="setting-item">
-                            <label for="breakReminder">Напоминание о перерыве</label>
-                            <select id="breakReminder">
-                                <option value="30">Каждые 30 минут</option>
-                                <option value="45">Каждые 45 минут</option>
-                                <option value="60">Каждый час</option>
-                            </select>
-                        </div>
+                    <div class="setting-item">
+                        <label for="notifications">Уведомления</label>
+                        <label class="theme-switch">
+                            <input type="checkbox" id="notifications">
+                            <span class="theme-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="dailyGoal">Цель на день (часы)</label>
+                        <input type="number" id="dailyGoal" min="0" max="24" step="0.5">
+                    </div>
+                    <div class="setting-item">
+                        <label for="breakReminder">Напоминание о перерыве (минуты)</label>
+                        <input type="number" id="breakReminder" min="0" max="120" step="5">
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="error" class="error-message hidden"></div>
+    <!-- Уведомления -->
+    <div class="notification" id="notification"></div>
+    <div class="error" id="error"></div>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
