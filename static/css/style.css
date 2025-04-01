@@ -14,6 +14,8 @@
     --nav-background: #ffffff;
     --input-background: #ffffff;
     --shadow-color: rgba(0,0,0,0.1);
+    --achievement-bg: #f8f9fa;
+    --level-progress-bg: #e9ecef;
 }
 
 [data-theme="dark"] {
@@ -26,6 +28,8 @@
     --nav-background: #2d2d2d;
     --input-background: #404040;
     --shadow-color: rgba(0,0,0,0.3);
+    --achievement-bg: #363636;
+    --level-progress-bg: #404040;
 }
 
 * {
@@ -117,10 +121,12 @@ body {
     font-size: 12px;
     padding: 8px;
     transition: all 0.3s ease;
+    border-radius: 8px;
 }
 
 .nav-item.active {
     color: var(--primary-color);
+    background-color: rgba(74, 144, 226, 0.1);
 }
 
 .nav-icon {
@@ -129,24 +135,164 @@ body {
 }
 
 /* Профиль пользователя */
-.profile-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 50%;
-    transition: all 0.3s ease;
+.pixel-profile {
+    text-align: center;
+    padding: 20px;
 }
 
 .profile-avatar {
-    width: 40px;
-    height: 40px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     object-fit: cover;
+    border: 4px solid var(--primary-color);
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+.pixel-level {
+    margin-top: 20px;
+}
+
+.level-progress {
+    background-color: var(--level-progress-bg);
+    height: 20px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-bar {
+    background-color: var(--primary-color);
+    height: 100%;
+    width: 0;
+    transition: width 0.3s ease;
+}
+
+/* Настройки */
+.pixel-settings {
+    padding: 20px;
+}
+
+.setting-item {
+    margin-bottom: 30px;
+}
+
+.setting-item h3 {
+    font-size: 14px;
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+.theme-switch {
+    display: flex;
+    gap: 10px;
+}
+
+.theme-button {
+    flex: 1;
+    padding: 10px;
     border: 2px solid var(--primary-color);
+    background: none;
+    color: var(--text-color);
+    font-family: 'Press Start 2P', cursive;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.theme-button.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Переключатель уведомлений */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--border-color);
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* Достижения */
+.pixel-achievements {
+    margin-top: 30px;
+}
+
+.pixel-achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.pixel-achievement-box {
+    background-color: var(--achievement-bg);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.pixel-achievement-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+.achievement-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.pixel-achievement-box h4 {
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+
+.pixel-achievement-box p {
+    font-size: 10px;
+    color: var(--text-color);
 }
 
 /* Переключатель темы */
@@ -296,8 +442,8 @@ body {
     background-color: var(--card-background);
     padding: 20px;
     margin: 20px 0;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px var(--shadow-color);
     transition: transform 0.3s ease;
 }
 
@@ -309,7 +455,7 @@ body {
     text-align: center;
     color: var(--primary-color);
     margin-bottom: 30px;
-    text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
+    text-shadow: 2px 2px 0px var(--shadow-color);
     font-size: 24px;
 }
 
@@ -339,7 +485,7 @@ body {
     width: 100%;
     box-sizing: border-box;
     transition: all 0.3s ease;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .pixel-input:focus {
@@ -359,7 +505,7 @@ body {
     text-transform: uppercase;
     font-size: 12px;
     margin: 5px;
-    border-radius: 4px;
+    border-radius: 8px;
 }
 
 .pixel-button:hover {
@@ -376,47 +522,24 @@ body {
 .pixel-timer-container {
     text-align: center;
     margin: 30px 0;
+    padding: 20px;
+    background-color: var(--card-background);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px var(--shadow-color);
 }
 
 .pixel-timer {
-    font-size: 36px;
+    font-size: 48px;
     color: var(--secondary-color);
     text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
     margin-bottom: 20px;
+    font-weight: bold;
 }
 
 .pixel-timer-controls {
     display: flex;
     justify-content: center;
     gap: 10px;
-}
-
-.pixel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.pixel-achievements {
-    display: flex;
-    gap: 10px;
-}
-
-.pixel-achievement {
-    width: 40px;
-    height: 40px;
-    border: 2px solid var(--secondary-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    transition: all 0.3s ease;
-}
-
-.pixel-achievement:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(243, 156, 18, 0.5);
 }
 
 .pixel-stats-container {
@@ -436,7 +559,8 @@ body {
     padding: 15px;
     text-align: center;
     transition: all 0.3s ease;
-    border-radius: 4px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .pixel-stat-box:hover {
@@ -472,7 +596,8 @@ body {
     padding: 10px;
     text-align: center;
     transition: all 0.3s ease;
-    border-radius: 4px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .pixel-category-box:hover {
@@ -510,10 +635,14 @@ select.pixel-input {
     }
     
     .pixel-timer {
-        font-size: 28px;
+        font-size: 36px;
     }
     
     .pixel-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pixel-achievements-grid {
         grid-template-columns: 1fr;
     }
 } 
