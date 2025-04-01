@@ -6,27 +6,20 @@
     <title>Pixel Time Tracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    
     <div class="container">
         <div id="welcome-screen" class="pixel-box" style="display: none;">
             <h1 class="pixel-title">Pixel Time Tracker</h1>
             <div class="pixel-welcome">
-                <p>Добро пожаловать в мир пиксельного трекинга времени!</p>
-                <p>Для начала работы, пожалуйста, откройте приложение через Telegram.</p>
+                <p>Для начала работы откройте приложение через Telegram</p>
             </div>
         </div>
 
         <div id="main-screen" class="pixel-box">
-            <div class="pixel-header">
-                <h2>Привет, <span id="userDisplayName">{{ user.username if user else 'Пользователь' }}</span>!</h2>
-                <div class="pixel-achievements">
-                    <div class="pixel-achievement" id="achievement1">🎯</div>
-                    <div class="pixel-achievement" id="achievement2">⏰</div>
-                    <div class="pixel-achievement" id="achievement3">🏆</div>
-                </div>
-            </div>
-
             <div class="pixel-timer-container">
                 <div class="pixel-timer" id="timer">00:00:00</div>
                 <div class="pixel-timer-controls">
@@ -70,34 +63,97 @@
                 <div id="categoryStats" class="pixel-category-grid"></div>
             </div>
         </div>
+
+        <div id="stats-screen" class="pixel-box" style="display: none;">
+            <h2 class="pixel-title">Статистика</h2>
+            <div class="pixel-stats-container">
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+
+        <div id="profile-screen" class="pixel-box" style="display: none;">
+            <h2 class="pixel-title">Профиль</h2>
+            <div class="pixel-profile">
+                <img id="userAvatar" class="profile-avatar" src="" alt="Аватар">
+                <h3 id="userName">Загрузка...</h3>
+                <div class="pixel-level">
+                    <div class="level-progress">
+                        <div class="progress-bar" id="levelProgress"></div>
+                    </div>
+                    <p>Уровень <span id="userLevel">1</span></p>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" data-screen="main">
+            <span class="material-icons nav-icon">timer</span>
+            <span>Трекер</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="stats">
+            <span class="material-icons nav-icon">bar_chart</span>
+            <span>Статистика</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="profile">
+            <span class="material-icons nav-icon">person</span>
+            <span>Профиль</span>
+        </a>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let startTime;
         let timerInterval;
         let isTracking = false;
         let tg = window.Telegram.WebApp;
+        let activityChart;
 
-        const welcomeScreen = document.getElementById('welcome-screen');
-        const mainScreen = document.getElementById('main-screen');
-        const startTrackingBtn = document.getElementById('startTrackingBtn');
-        const stopTrackingBtn = document.getElementById('stopTrackingBtn');
-        const activityInput = document.getElementById('activity');
-        const categorySelect = document.getElementById('category');
-        const tagsInput = document.getElementById('tags');
-        const timer = document.getElementById('timer');
-        const userDisplayName = document.getElementById('userDisplayName');
+        // Инициализация темы
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        // Переключение экранов
+        const screens = document.querySelectorAll('.pixel-box');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        function showScreen(screenId) {
+            screens.forEach(screen => screen.style.display = 'none');
+            document.getElementById(`${screenId}-screen`).style.display = 'block';
+            navItems.forEach(item => item.classList.remove('active'));
+            document.querySelector(`[data-screen="${screenId}"]`).classList.add('active');
+        }
+
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const screenId = item.dataset.screen;
+                showScreen(screenId);
+            });
+        });
+
+        // Переключение темы
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
 
         // Инициализация Telegram Web App
         document.addEventListener('DOMContentLoaded', function() {
             if (tg.initDataUnsafe.user) {
-                mainScreen.style.display = 'block';
-                welcomeScreen.style.display = 'none';
-                userDisplayName.textContent = tg.initDataUnsafe.user.username || 'Пользователь';
+                const user = tg.initDataUnsafe.user;
+                document.getElementById('userName').textContent = user.username || 'Пользователь';
+                if (user.photo_url) {
+                    document.getElementById('userAvatar').src = user.photo_url;
+                }
+                showScreen('main');
                 updateStats();
             } else {
-                mainScreen.style.display = 'none';
-                welcomeScreen.style.display = 'block';
+                showScreen('welcome');
             }
         });
 
@@ -116,7 +172,7 @@
             const tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
 
             if (!activity) {
-                alert('Пожалуйста, введите название активности');
+                alert('Введите название активности');
                 return;
             }
 
@@ -145,7 +201,7 @@
                 const data = await response.json();
                 console.log(data);
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Ошибка:', error);
             }
         }
 
@@ -169,10 +225,40 @@
                 console.log(data);
                 updateStats();
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Ошибка:', error);
             }
         }
 
+        // Инициализация графика
+        function initChart(data) {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            if (activityChart) {
+                activityChart.destroy();
+            }
+            
+            activityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Активность (минуты)',
+                        data: data.values,
+                        borderColor: '#4a90e2',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+
+        // Обновление статистики
         async function updateStats() {
             try {
                 const response = await fetch('/api/stats');
@@ -181,6 +267,14 @@
                 document.getElementById('totalTracks').textContent = data.total_tracks;
                 document.getElementById('totalTime').textContent = `${Math.floor(data.total_duration / 3600)} ч`;
                 document.getElementById('todayTime').textContent = `${Math.floor(data.daily_stats.total_duration / 60)} мин`;
+                document.getElementById('userLevel').textContent = data.level;
+                document.getElementById('levelProgress').style.width = `${data.xp_progress}%`;
+
+                // Обновляем график
+                initChart({
+                    labels: data.activity_data.labels,
+                    values: data.activity_data.values
+                });
 
                 // Обновляем статистику по категориям
                 const categoryStats = document.getElementById('categoryStats');
@@ -195,7 +289,7 @@
                     categoryStats.appendChild(categoryBox);
                 });
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Ошибка:', error);
             }
         }
 
