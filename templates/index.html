@@ -6,651 +6,157 @@
     <title>Pixel Time Tracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <div id="welcome-screen" class="pixel-box" style="display: none;">
-            <h1 class="pixel-title">Pixel Time Tracker</h1>
-            <div class="pixel-welcome">
-                <p>Для начала работы откройте приложение через Telegram</p>
-            </div>
-        </div>
-
-        <div id="main-screen" class="pixel-box">
-            <h1 class="pixel-title">Pixel Time Tracker</h1>
-            
-            <div class="pixel-timer-container">
-                <div class="pixel-timer" id="timer">00:00:00</div>
-                <div class="pixel-timer-controls">
-                    <button class="pixel-button" id="startBtn">Старт</button>
-                    <button class="pixel-button" id="stopBtn" disabled>Стоп</button>
-                    <button class="pixel-button" id="resetBtn">Сброс</button>
-                    <button class="pixel-button" id="breakBtn" disabled>Перерыв</button>
-                </div>
-            </div>
-
-            <div class="pixel-input-group">
-                <input type="text" class="pixel-input" id="activityInput" placeholder="Введите название активности">
-                <select class="pixel-input" id="categorySelect">
-                    <option value="">Выберите категорию</option>
-                </select>
-                <input type="text" class="pixel-input" id="tagsInput" placeholder="Теги (через запятую)">
-                <button class="pixel-button" id="addActivityBtn">Добавить</button>
-            </div>
-
-            <div class="pixel-stats-container">
-                <h2 class="pixel-title">Статистика</h2>
-                <div class="pixel-stats-grid">
-                    <div class="pixel-stat-box">
-                        <h3>Всего времени</h3>
-                        <p id="totalTime">0 мин</p>
-                    </div>
-                    <div class="pixel-stat-box">
-                        <h3>Уровень</h3>
-                        <p id="userLevel">1</p>
-                    </div>
-                    <div class="pixel-stat-box">
-                        <h3>Опыт</h3>
-                        <p id="userXP">0/100</p>
-                    </div>
-                    <div class="pixel-stat-box">
-                        <h3>Цель на день</h3>
-                        <p id="dailyGoal">120 мин</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pixel-categories">
-                <h2 class="pixel-title">Категории</h2>
-                <div class="pixel-category-grid" id="categoryGrid">
-                    <!-- Категории будут добавлены динамически -->
-                </div>
-            </div>
-        </div>
-
-        <div id="stats-screen" class="pixel-box" style="display: none;">
-            <h2 class="pixel-title">Статистика</h2>
-            <div class="pixel-stats-grid">
-                <div class="pixel-stat-box">
-                    <h3>За неделю</h3>
-                    <p id="weekTime">0 мин</p>
-                </div>
-                <div class="pixel-stat-box">
-                    <h3>За день</h3>
-                    <p id="dayTime">0 мин</p>
-                </div>
-                <div class="pixel-stat-box">
-                    <h3>Активностей</h3>
-                    <p id="activitiesCount">0</p>
-                </div>
-                <div class="pixel-stat-box">
-                    <h3>Продуктивность</h3>
-                    <p id="productivityScore">0/5</p>
-                </div>
-            </div>
-
-            <div class="pixel-chart-container">
-                <canvas id="activityChart"></canvas>
-            </div>
-
-            <div class="pixel-achievements">
-                <h2 class="pixel-title">Достижения</h2>
-                <div class="pixel-achievements-grid" id="achievementsGrid">
-                    <!-- Достижения будут добавлены динамически -->
-                </div>
-            </div>
-        </div>
-
-        <div id="profile-screen" class="pixel-box" style="display: none;">
-            <div class="pixel-profile">
-                <img src="" alt="Аватар" class="profile-avatar" id="userAvatar">
-                <h2 id="userName">Пользователь</h2>
-                
-                <div class="pixel-level">
-                    <h3>Уровень <span id="profileLevel">1</span></h3>
-                    <div class="level-progress">
-                        <div class="progress-bar" id="levelProgress"></div>
-                    </div>
-                    <p>Опыт: <span id="profileXP">0/100</span></p>
-                </div>
-
-                <div class="pixel-settings">
-                    <h3>Настройки</h3>
-                    <div class="setting-item">
-                        <label>Цель на день (мин)</label>
-                        <input type="number" id="dailyGoalInput" min="0" max="1440">
-                    </div>
-                    <div class="setting-item">
-                        <label>Напоминание о перерыве (мин)</label>
-                        <input type="number" id="breakReminderInput" min="0" max="120">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="settings-screen" class="pixel-box" style="display: none;">
-            <h2 class="pixel-title">Настройки</h2>
-            
-            <div class="pixel-settings">
-                <div class="setting-item">
-                    <h3>Тема</h3>
-                    <div class="theme-switch">
-                        <button class="theme-button active" data-theme="light">Светлая</button>
-                        <button class="theme-button" data-theme="dark">Тёмная</button>
-                    </div>
-                </div>
-
-                <div class="setting-item">
-                    <h3>Уведомления</h3>
-                    <label class="switch">
-                        <input type="checkbox" id="notificationsToggle">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="setting-item">
-                    <h3>Напоминания</h3>
-                    <div id="remindersList">
-                        <!-- Напоминания будут добавлены динамически -->
-                    </div>
-                    <button class="pixel-button" id="addReminderBtn">Добавить напоминание</button>
-                </div>
-
-                <div class="setting-item">
-                    <h3>Экспорт данных</h3>
-                    <button class="pixel-button" id="exportBtn">Скачать Excel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <nav class="bottom-nav">
-        <a href="#" class="nav-item active" data-screen="main-screen">
-            <span class="nav-icon material-icons">timer</span>
-            <span>Трекер</span>
+    <!-- Боковая навигация -->
+    <nav class="side-nav">
+        <a href="#" class="nav-item active">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+            </svg>
         </a>
-        <a href="#" class="nav-item" data-screen="stats-screen">
-            <span class="nav-icon material-icons">bar_chart</span>
-            <span>Статистика</span>
+        <a href="#" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
         </a>
-        <a href="#" class="nav-item" data-screen="profile-screen">
-            <span class="nav-icon material-icons">person</span>
-            <span>Профиль</span>
-        </a>
-        <a href="#" class="nav-item" data-screen="settings-screen">
-            <span class="nav-icon material-icons">settings</span>
-            <span>Настройки</span>
+        <a href="#" class="nav-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
         </a>
     </nav>
 
-    <!-- Модальное окно для добавления напоминания -->
-    <div id="reminderModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>Добавить напоминание</h3>
-            <div class="form-group">
-                <label>Активность</label>
-                <input type="text" id="reminderActivityInput" class="pixel-input">
-            </div>
-            <div class="form-group">
-                <label>Время</label>
-                <input type="time" id="reminderTimeInput" class="pixel-input">
-            </div>
-            <div class="form-group">
-                <label>Дни недели</label>
-                <div class="weekdays-selector">
-                    <label><input type="checkbox" value="1"> Пн</label>
-                    <label><input type="checkbox" value="2"> Вт</label>
-                    <label><input type="checkbox" value="3"> Ср</label>
-                    <label><input type="checkbox" value="4"> Чт</label>
-                    <label><input type="checkbox" value="5"> Пт</label>
-                    <label><input type="checkbox" value="6"> Сб</label>
-                    <label><input type="checkbox" value="7"> Вс</label>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="pixel-button" id="saveReminderBtn">Сохранить</button>
-                <button class="pixel-button" id="cancelReminderBtn">Отмена</button>
+    <!-- Основной контент -->
+    <main class="main-content">
+        <!-- Заголовок -->
+        <header class="welcome-header">
+            <h1>Добро пожаловать, Ник!</h1>
+            <div class="date">Сегодня — 1 апреля</div>
+        </header>
+
+        <!-- Текущая задача -->
+        <div class="current-task">
+            <h2>Текущая задача</h2>
+            <input type="text" class="task-input" value="Изучение материалов">
+            <select class="category-select">
+                <option value="study">Учёба</option>
+                <option value="work">Работа</option>
+                <option value="hobby">Хобби</option>
+            </select>
+            <div class="timer">00:13:25</div>
+            <div class="timer-controls">
+                <button class="btn-finish">Завершить</button>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <!-- Новая сессия -->
+        <div class="current-task">
+            <h2>Новая сессия</h2>
+            <select class="category-select">
+                <option value="">Название задачи</option>
+                <option value="study">Учёба</option>
+                <option value="work">Работа</option>
+                <option value="hobby">Хобби</option>
+            </select>
+        </div>
+
+        <!-- График активности -->
+        <div class="activity-chart">
+            <div class="chart-header">
+                <h2 class="chart-title">День в цвете</h2>
+                <div class="chart-tabs">
+                    <button class="chart-tab active">Сегодня</button>
+                    <button class="chart-tab">Вчера</button>
+                </div>
+            </div>
+            <div class="time-chart">
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 0%"></div>
+                    <span class="chart-label">6</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 0%"></div>
+                    <span class="chart-label">8</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 0%"></div>
+                    <span class="chart-label">10</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 30%"></div>
+                    <span class="chart-label">12</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 60%"></div>
+                    <span class="chart-label">14</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 40%"></div>
+                    <span class="chart-label">16</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 20%"></div>
+                    <span class="chart-label">18</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 0%"></div>
+                    <span class="chart-label">20</span>
+                </div>
+                <div class="chart-column">
+                    <div class="chart-bar" style="height: 0%"></div>
+                    <span class="chart-label">22</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопка добавить вручную -->
+        <button class="btn-add-manual">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Добавить вручную
+        </button>
+    </main>
+
     <script>
-        let startTime;
-        let timerInterval;
-        let isTracking = false;
-        let currentBreak = null;
-        let tg = window.Telegram.WebApp;
-        let activityChart;
-        let timerState = {
-            startTime: null,
-            elapsedTime: 0
-        };
-
-        // Сохранение состояния таймера
-        function saveTimerState() {
-            if (isTracking) {
-                timerState.startTime = startTime;
-                timerState.elapsedTime = (new Date() - startTime) / 1000;
-            }
-            localStorage.setItem('timerState', JSON.stringify(timerState));
-        }
-
-        // Восстановление состояния таймера
-        function restoreTimerState() {
-            const savedState = localStorage.getItem('timerState');
-            if (savedState) {
-                timerState = JSON.parse(savedState);
-                if (timerState.startTime) {
-                    startTime = new Date(timerState.startTime);
-                    isTracking = true;
-                    startBtn.disabled = true;
-                    stopBtn.disabled = false;
-                    breakBtn.disabled = false;
-                    activityInput.disabled = true;
-                    categorySelect.disabled = true;
-                    tagsInput.disabled = true;
-                    timerInterval = setInterval(updateTimer, 1000);
-                }
-            }
-        }
-
-        // Обработка видимости страницы
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                saveTimerState();
-            } else {
-                restoreTimerState();
-            }
-        });
-
-        // Инициализация темы
-        const themeButtons = document.querySelectorAll('.theme-button');
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.body.setAttribute('data-theme', savedTheme);
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
         
-        themeButtons.forEach(button => {
-            if (button.dataset.theme === savedTheme) {
-                button.classList.add('active');
-            }
-        });
-
-        // Переключение экранов
-        const screens = document.querySelectorAll('.pixel-box');
-        const navItems = document.querySelectorAll('.nav-item');
-
-        function showScreen(screenId) {
-            screens.forEach(screen => screen.style.display = 'none');
-            document.getElementById(`${screenId}-screen`).style.display = 'block';
-            navItems.forEach(item => item.classList.remove('active'));
-            document.querySelector(`[data-screen="${screenId}"]`).classList.add('active');
-            
-            if (screenId === 'stats-screen') {
-                updateStats();
-            } else if (screenId === 'profile-screen') {
-                loadUserProfile();
-            }
-        }
-
-        navItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const screenId = item.dataset.screen;
-                showScreen(screenId);
-            });
-        });
-
-        // Переключение темы
-        themeButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const theme = button.dataset.theme;
-                document.body.setAttribute('data-theme', theme);
-                localStorage.setItem('theme', theme);
-                themeButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-            });
-        });
-
-        // Инициализация Telegram Web App
-        document.addEventListener('DOMContentLoaded', function() {
-            if (tg.initDataUnsafe.user) {
-                const user = tg.initDataUnsafe.user;
-                document.getElementById('userName').textContent = user.username || 'Пользователь';
-                if (user.photo_url) {
-                    document.getElementById('userAvatar').src = user.photo_url;
-                }
-                showScreen('main-screen');
-                updateStats();
-                loadCategories();
-                loadReminders();
-                restoreTimerState();
-            } else {
-                showScreen('welcome');
-            }
-        });
-
+        // Текущее время
         function updateTimer() {
-            const now = new Date();
-            const diff = Math.floor((now - startTime) / 1000);
-            const hours = Math.floor(diff / 3600);
-            const minutes = Math.floor((diff % 3600) / 60);
-            const seconds = diff % 60;
-            timer.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        }
-
-        async function startTracking() {
-            const activity = activityInput.value;
-            const category = categorySelect.value;
-            const tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-
-            if (!activity) {
-                alert('Введите название активности');
-                return;
-            }
-
-            startTime = new Date();
-            isTracking = true;
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            breakBtn.disabled = false;
-            activityInput.disabled = true;
-            categorySelect.disabled = true;
-            tagsInput.disabled = true;
-
-            timerInterval = setInterval(updateTimer, 1000);
-
-            try {
-                const response = await fetch('/api/activity', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        name: activity,
-                        category_id: category,
-                        tags: tags
-                    }),
-                });
-                const data = await response.json();
-                console.log(data);
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        }
-
-        async function stopTracking() {
-            clearInterval(timerInterval);
-            isTracking = false;
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            breakBtn.disabled = true;
-            activityInput.disabled = false;
-            categorySelect.disabled = false;
-            tagsInput.disabled = false;
-            localStorage.removeItem('timerState');
-
-            try {
-                const response = await fetch('/api/stop', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                const data = await response.json();
-                console.log(data);
-                updateStats();
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        }
-
-        async function startBreak() {
-            if (!currentBreak) {
-                try {
-                    const response = await fetch('/api/break', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            activity_id: currentActivityId,
-                            type: 'short'
-                        }),
-                    });
-                    const data = await response.json();
-                    currentBreak = data.break_id;
-                    breakBtn.textContent = 'Завершить перерыв';
-                } catch (error) {
-                    console.error('Ошибка:', error);
-                }
-            } else {
-                try {
-                    const response = await fetch(`/api/break/${currentBreak}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        }
-                    });
-                    const data = await response.json();
-                    currentBreak = null;
-                    breakBtn.textContent = 'Перерыв';
-                } catch (error) {
-                    console.error('Ошибка:', error);
-                }
-            }
-        }
-
-        // Загрузка категорий
-        async function loadCategories() {
-            try {
-                const response = await fetch('/api/categories');
-                const categories = await response.json();
-                
-                const categorySelect = document.getElementById('categorySelect');
-                categorySelect.innerHTML = '<option value="">Выберите категорию</option>';
-                categories.forEach(category => {
-                    categorySelect.innerHTML += `
-                        <option value="${category.id}">${category.icon} ${category.name}</option>
-                    `;
-                });
-
-                const categoryGrid = document.getElementById('categoryGrid');
-                categoryGrid.innerHTML = '';
-                categories.forEach(category => {
-                    categoryGrid.innerHTML += `
-                        <div class="pixel-category-box" style="border-color: ${category.color}">
-                            <span class="category-icon">${category.icon}</span>
-                            <h4>${category.name}</h4>
-                            <p id="category-${category.id}-time">0 мин</p>
-                        </div>
-                    `;
-                });
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        }
-
-        // Загрузка напоминаний
-        async function loadReminders() {
-            try {
-                const response = await fetch('/api/reminders');
-                const reminders = await response.json();
-                
-                const remindersList = document.getElementById('remindersList');
-                remindersList.innerHTML = '';
-                reminders.forEach(reminder => {
-                    remindersList.innerHTML += `
-                        <div class="reminder-item">
-                            <span class="reminder-time">${reminder.time}</span>
-                            <span class="reminder-activity">${reminder.activity_name}</span>
-                            <span class="reminder-days">${reminder.days.join(', ')}</span>
-                            <button class="delete-reminder" data-id="${reminder.id}">×</button>
-                        </div>
-                    `;
-                });
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        }
-
-        // Загрузка профиля пользователя
-        async function loadUserProfile() {
-            try {
-                const response = await fetch('/api/user');
-                const user = await response.json();
-                
-                document.getElementById('dailyGoalInput').value = user.daily_goal;
-                document.getElementById('breakReminderInput').value = user.break_reminder;
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        }
-
-        // Экспорт данных
-        document.getElementById('exportBtn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/export');
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `pixel_time_tracker_${new Date().toISOString().split('T')[0]}.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        });
-
-        // Модальное окно напоминаний
-        const reminderModal = document.getElementById('reminderModal');
-        const addReminderBtn = document.getElementById('addReminderBtn');
-        const saveReminderBtn = document.getElementById('saveReminderBtn');
-        const cancelReminderBtn = document.getElementById('cancelReminderBtn');
-
-        addReminderBtn.addEventListener('click', () => {
-            reminderModal.style.display = 'block';
-        });
-
-        cancelReminderBtn.addEventListener('click', () => {
-            reminderModal.style.display = 'none';
-        });
-
-        saveReminderBtn.addEventListener('click', async () => {
-            const activity = document.getElementById('reminderActivityInput').value;
-            const time = document.getElementById('reminderTimeInput').value;
-            const days = Array.from(document.querySelectorAll('.weekdays-selector input:checked'))
-                .map(input => input.value);
-
-            if (!activity || !time || days.length === 0) {
-                alert('Заполните все поля');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/reminders', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        activity_name: activity,
-                        time: time,
-                        days: days
-                    }),
-                });
-                const data = await response.json();
-                reminderModal.style.display = 'none';
-                loadReminders();
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        });
-
-        // Инициализация графика
-        function initChart(data) {
-            const ctx = document.getElementById('activityChart').getContext('2d');
-            if (activityChart) {
-                activityChart.destroy();
-            }
+            const timerElement = document.querySelector('.timer');
+            if (!timerElement) return;
             
-            activityChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [{
-                        label: 'Активность (минуты)',
-                        data: data.values,
-                        borderColor: '#4a90e2',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
-                    }
-                }
-            });
+            const startTime = localStorage.getItem('startTime');
+            if (!startTime) return;
+            
+            const now = new Date().getTime();
+            const elapsed = now - parseInt(startTime);
+            
+            const hours = Math.floor(elapsed / (1000 * 60 * 60));
+            const minutes = Math.floor((elapsed % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((elapsed % (1000 * 60)) / 1000);
+            
+            timerElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
-        // Обновление статистики
-        async function updateStats() {
-            try {
-                const response = await fetch('/api/stats');
-                const data = await response.json();
-                
-                document.getElementById('totalTime').textContent = `${Math.floor((data.total_duration || 0) / 60)} мин`;
-                document.getElementById('weekTime').textContent = `${Math.floor((data.total_duration || 0) / 60)} мин`;
-                document.getElementById('dayTime').textContent = `${data.today_duration || 0} мин`;
-                document.getElementById('activitiesCount').textContent = data.activities_count || 0;
-                document.getElementById('userLevel').textContent = data.level || 1;
-                document.getElementById('userXP').textContent = `${data.xp || 0}/100`;
-                document.getElementById('dailyGoal').textContent = `${data.daily_goal || 120} мин`;
-                document.getElementById('levelProgress').style.width = `${data.xp_progress || 0}%`;
+        // Обновление таймера каждую секунду
+        setInterval(updateTimer, 1000);
 
-                // Обновляем график
-                initChart({
-                    labels: Object.keys(data.daily_stats || {}),
-                    values: Object.values(data.daily_stats || {})
-                });
-
-                // Обновляем статистику по категориям
-                Object.entries(data.category_stats || {}).forEach(([category, duration]) => {
-                    const categoryElement = document.getElementById(`category-${category}-time`);
-                    if (categoryElement) {
-                        categoryElement.textContent = `${Math.floor(duration / 60)} мин`;
-                    }
-                });
-
-                // Обновляем статистику продуктивности
-                const productivityScore = Object.entries(data.productivity_stats || {})
-                    .reduce((acc, [score, count]) => acc + (parseInt(score) * count), 0) /
-                    Object.values(data.productivity_stats || {}).reduce((a, b) => a + b, 0) || 0;
-                document.getElementById('productivityScore').textContent = `${productivityScore.toFixed(1)}/5`;
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
-        }
-
-        startBtn.addEventListener('click', startTracking);
-        stopBtn.addEventListener('click', stopTracking);
-        breakBtn.addEventListener('click', startBreak);
-
-        // Анимация пиксельных элементов
-        document.querySelectorAll('.pixel-button').forEach(button => {
-            button.addEventListener('mouseover', () => {
-                button.style.transform = 'scale(1.05)';
-            });
-            button.addEventListener('mouseout', () => {
-                button.style.transform = 'scale(1)';
-            });
+        // Обработчики событий
+        document.querySelector('.btn-finish').addEventListener('click', function() {
+            // Здесь будет логика завершения задачи
+            localStorage.removeItem('startTime');
         });
+
+        // Установка текущей даты
+        const dateElement = document.querySelector('.date');
+        const options = { day: 'numeric', month: 'long' };
+        const currentDate = new Date().toLocaleDateString('ru-RU', options);
+        dateElement.textContent = `Сегодня — ${currentDate}`;
     </script>
 </body>
 </html> 

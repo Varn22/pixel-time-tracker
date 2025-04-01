@@ -23,8 +23,8 @@ db = SQLAlchemy(app)
 # Модель пользователя
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    telegram_id = db.Column(db.Integer, unique=True)
-    username = db.Column(db.String(80))
+    telegram_id = db.Column(db.String(50), unique=True)
+    username = db.Column(db.String(100))
     photo_url = db.Column(db.String(200))
     level = db.Column(db.Integer, default=1)
     xp = db.Column(db.Integer, default=0)
@@ -101,13 +101,12 @@ class Achievement(db.Model):
 # Модель активностей
 class Activity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
-    tags = db.Column(db.String(200))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50))
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
     end_time = db.Column(db.DateTime)
     duration = db.Column(db.Integer)  # в минутах
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     notes = db.Column(db.Text)
     productivity = db.Column(db.Integer)  # Оценка продуктивности (1-5)
     breaks = db.relationship('Break', backref='activity', lazy=True)
@@ -158,42 +157,72 @@ def create_user():
 
 @app.route('/api/activity', methods=['POST'])
 def start_activity():
-    telegram_id = request.headers.get('X-Telegram-Id')
-    user = User.query.filter_by(telegram_id=telegram_id).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
     data = request.json
+    user_id = request.headers.get('X-User-Id')
+    
+    if not user_id:
+        return jsonify({'error': 'Не авторизован'}), 401
+    
+    user = User.query.filter_by(telegram_id=user_id).first()
+    if not user:
+        return jsonify({'error': 'Пользователь не найден'}), 404
+    
+    # Проверяем, нет ли уже активной задачи
+    active_activity = Activity.query.filter_by(
+        user_id=user.id,
+        end_time=None
+    ).first()
+    
+    if active_activity:
+        return jsonify({'error': 'Уже есть активная задача'}), 400
+    
     activity = Activity(
+        user_id=user.id,
         name=data['name'],
-        category_id=data.get('category_id'),
-        tags=data.get('tags'),
-        user_id=user.id
+        category=data.get('category', 'other')
     )
+    
     db.session.add(activity)
     db.session.commit()
-    return jsonify({'message': 'Activity started successfully'})
+    
+    return jsonify({
+        'id': activity.id,
+        'name': activity.name,
+        'category': activity.category,
+        'start_time': activity.start_time.isoformat()
+    })
 
-@app.route('/api/activity/<int:activity_id>', methods=['PUT'])
-def stop_activity(activity_id):
-    telegram_id = request.headers.get('X-Telegram-Id')
-    user = User.query.filter_by(telegram_id=telegram_id).first()
+@app.route('/api/activity/stop', methods=['POST'])
+def stop_activity():
+    user_id = request.headers.get('X-User-Id')
+    
+    if not user_id:
+        return jsonify({'error': 'Не авторизован'}), 401
+    
+    user = User.query.filter_by(telegram_id=user_id).first()
     if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    activity = Activity.query.get_or_404(activity_id)
-    if activity.user_id != user.id:
-        return jsonify({'error': 'Unauthorized'}), 403
-
+        return jsonify({'error': 'Пользователь не найден'}), 404
+    
+    activity = Activity.query.filter_by(
+        user_id=user.id,
+        end_time=None
+    ).first()
+    
+    if not activity:
+        return jsonify({'error': 'Нет активной задачи'}), 404
+    
     activity.end_time = datetime.utcnow()
     activity.duration = int((activity.end_time - activity.start_time).total_seconds() / 60)
-    user.add_xp(activity.duration)  # 1 XP за каждую минуту
+    
     db.session.commit()
-
+    
     return jsonify({
-        'message': 'Activity stopped successfully',
+        'id': activity.id,
+        'name': activity.name,
+        'category': activity.category,
         'duration': activity.duration,
-        'xp_earned': activity.duration
+        'start_time': activity.start_time.isoformat(),
+        'end_time': activity.end_time.isoformat()
     })
 
 @app.route('/api/categories', methods=['GET'])
@@ -281,9 +310,8 @@ def export_data():
             'Время начала': activity.start_time.strftime('%H:%M'),
             'Время окончания': activity.end_time.strftime('%H:%M') if activity.end_time else None,
             'Активность': activity.name,
-            'Категория': activity.category.name if activity.category else None,
+            'Категория': activity.category if activity.category else None,
             'Длительность (мин)': activity.duration,
-            'Теги': activity.tags,
             'Заметки': activity.notes,
             'Продуктивность': activity.productivity
         })
@@ -387,7 +415,7 @@ def get_stats():
 
         # Статистика по категориям
         if activity.category:
-            category_stats[activity.category.name] = category_stats.get(activity.category.name, 0) + activity.duration
+            category_stats[activity.category] = category_stats.get(activity.category, 0) + activity.duration
 
         # Статистика по продуктивности
         if activity.productivity:
@@ -558,6 +586,68 @@ def stats():
                          current_xp=current_xp,
                          next_level_xp=next_level_xp,
                          xp_percentage=xp_percentage)
+
+@app.route('/api/stats/daily', methods=['GET'])
+def get_daily_stats():
+    user_id = request.headers.get('X-User-Id')
+    
+    if not user_id:
+        return jsonify({'error': 'Не авторизован'}), 401
+    
+    user = User.query.filter_by(telegram_id=user_id).first()
+    if not user:
+        return jsonify({'error': 'Пользователь не найден'}), 404
+    
+    # Получаем статистику за последние 24 часа по часам
+    now = datetime.utcnow()
+    yesterday = now - timedelta(days=1)
+    
+    activities = Activity.query.filter(
+        Activity.user_id == user.id,
+        Activity.start_time >= yesterday,
+        Activity.end_time.isnot(None)
+    ).all()
+    
+    # Создаем словарь для хранения длительности по часам
+    hours_stats = {str(i).zfill(2): 0 for i in range(24)}
+    
+    for activity in activities:
+        hour = activity.start_time.hour
+        hours_stats[str(hour).zfill(2)] += activity.duration or 0
+    
+    return jsonify({
+        'hours': list(hours_stats.keys()),
+        'durations': list(hours_stats.values())
+    })
+
+@app.route('/api/stats/categories', methods=['GET'])
+def get_category_stats():
+    user_id = request.headers.get('X-User-Id')
+    
+    if not user_id:
+        return jsonify({'error': 'Не авторизован'}), 401
+    
+    user = User.query.filter_by(telegram_id=user_id).first()
+    if not user:
+        return jsonify({'error': 'Пользователь не найден'}), 404
+    
+    # Получаем статистику по категориям за последние 7 дней
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    
+    activities = Activity.query.filter(
+        Activity.user_id == user.id,
+        Activity.start_time >= week_ago,
+        Activity.end_time.isnot(None)
+    ).all()
+    
+    category_stats = {}
+    for activity in activities:
+        category = activity.category or 'other'
+        if category not in category_stats:
+            category_stats[category] = 0
+        category_stats[category] += activity.duration or 0
+    
+    return jsonify(category_stats)
 
 if __name__ == '__main__':
     with app.app_context():
