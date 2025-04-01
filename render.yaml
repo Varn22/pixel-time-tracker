@@ -6,12 +6,19 @@ services:
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.10.0
       - key: TELEGRAM_BOT_TOKEN
         sync: false
+      - key: WEBAPP_URL
+        sync: false
       - key: SECRET_KEY
-        generateValue: true
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
-          name: pixel-time-tracker-db
-          property: connectionString 
+          name: pixel_tracker_db
+          property: connectionString
+
+databases:
+  - name: pixel_tracker_db
+    databaseName: pixel_tracker
+    user: pixel_tracker_user 
