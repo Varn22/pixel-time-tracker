@@ -9,8 +9,6 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <button class="theme-toggle" id="themeToggle">🌙</button>
-    
     <div class="container">
         <div id="welcome-screen" class="pixel-box" style="display: none;">
             <h1 class="pixel-title">Pixel Time Tracker</h1>
@@ -20,84 +18,127 @@
         </div>
 
         <div id="main-screen" class="pixel-box">
+            <h1 class="pixel-title">Pixel Time Tracker</h1>
+            
             <div class="pixel-timer-container">
                 <div class="pixel-timer" id="timer">00:00:00</div>
                 <div class="pixel-timer-controls">
-                    <button class="pixel-button" id="startTrackingBtn">Старт</button>
-                    <button class="pixel-button" id="stopTrackingBtn" disabled>Стоп</button>
+                    <button class="pixel-button" id="startBtn">Старт</button>
+                    <button class="pixel-button" id="stopBtn" disabled>Стоп</button>
+                    <button class="pixel-button" id="resetBtn">Сброс</button>
                 </div>
             </div>
 
             <div class="pixel-input-group">
-                <input type="text" class="pixel-input" id="activity" placeholder="Что вы делаете?">
-                <select class="pixel-input" id="category">
-                    <option value="">Выберите категорию</option>
-                    <option value="work">Работа</option>
-                    <option value="study">Учеба</option>
-                    <option value="hobby">Хобби</option>
-                    <option value="sport">Спорт</option>
-                    <option value="other">Другое</option>
-                </select>
-                <input type="text" class="pixel-input" id="tags" placeholder="Теги (через запятую)">
+                <input type="text" class="pixel-input" id="activityInput" placeholder="Введите название активности">
+                <button class="pixel-button" id="addActivityBtn">Добавить</button>
             </div>
 
             <div class="pixel-stats-container">
+                <h2 class="pixel-title">Статистика</h2>
                 <div class="pixel-stats-grid">
                     <div class="pixel-stat-box">
-                        <h3>Сегодня</h3>
-                        <p id="todayTime">0 мин</p>
+                        <h3>Всего времени</h3>
+                        <p id="totalTime">0 мин</p>
                     </div>
                     <div class="pixel-stat-box">
-                        <h3>Всего треков</h3>
-                        <p id="totalTracks">0</p>
+                        <h3>Уровень</h3>
+                        <p id="userLevel">1</p>
                     </div>
                     <div class="pixel-stat-box">
-                        <h3>Общее время</h3>
-                        <p id="totalTime">0 ч</p>
+                        <h3>Опыт</h3>
+                        <p id="userXP">0/100</p>
                     </div>
                 </div>
             </div>
 
             <div class="pixel-categories">
-                <h3>Категории</h3>
-                <div id="categoryStats" class="pixel-category-grid"></div>
+                <h2 class="pixel-title">Категории</h2>
+                <div class="pixel-category-grid" id="categoryGrid">
+                    <!-- Категории будут добавлены динамически -->
+                </div>
             </div>
         </div>
 
         <div id="stats-screen" class="pixel-box" style="display: none;">
             <h2 class="pixel-title">Статистика</h2>
-            <div class="pixel-stats-container">
-                <canvas id="activityChart"></canvas>
+            <div class="pixel-stats-grid">
+                <div class="pixel-stat-box">
+                    <h3>За неделю</h3>
+                    <p id="weekTime">0 мин</p>
+                </div>
+                <div class="pixel-stat-box">
+                    <h3>За день</h3>
+                    <p id="dayTime">0 мин</p>
+                </div>
+                <div class="pixel-stat-box">
+                    <h3>Активностей</h3>
+                    <p id="activitiesCount">0</p>
+                </div>
+            </div>
+
+            <div class="pixel-achievements">
+                <h2 class="pixel-title">Достижения</h2>
+                <div class="pixel-achievements-grid" id="achievementsGrid">
+                    <!-- Достижения будут добавлены динамически -->
+                </div>
             </div>
         </div>
 
         <div id="profile-screen" class="pixel-box" style="display: none;">
-            <h2 class="pixel-title">Профиль</h2>
             <div class="pixel-profile">
-                <img id="userAvatar" class="profile-avatar" src="" alt="Аватар">
-                <h3 id="userName">Загрузка...</h3>
+                <img src="" alt="Аватар" class="profile-avatar" id="userAvatar">
+                <h2 id="userName">Пользователь</h2>
+                
                 <div class="pixel-level">
+                    <h3>Уровень <span id="profileLevel">1</span></h3>
                     <div class="level-progress">
                         <div class="progress-bar" id="levelProgress"></div>
                     </div>
-                    <p>Уровень <span id="userLevel">1</span></p>
+                    <p>Опыт: <span id="profileXP">0/100</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-screen" class="pixel-box" style="display: none;">
+            <h2 class="pixel-title">Настройки</h2>
+            
+            <div class="pixel-settings">
+                <div class="setting-item">
+                    <h3>Тема</h3>
+                    <div class="theme-switch">
+                        <button class="theme-button active" data-theme="light">Светлая</button>
+                        <button class="theme-button" data-theme="dark">Тёмная</button>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <h3>Уведомления</h3>
+                    <label class="switch">
+                        <input type="checkbox" id="notificationsToggle">
+                        <span class="slider"></span>
+                    </label>
                 </div>
             </div>
         </div>
     </div>
 
     <nav class="bottom-nav">
-        <a href="#" class="nav-item active" data-screen="main">
-            <span class="material-icons nav-icon">timer</span>
+        <a href="#" class="nav-item active" data-screen="main-screen">
+            <span class="nav-icon material-icons">timer</span>
             <span>Трекер</span>
         </a>
-        <a href="#" class="nav-item" data-screen="stats">
-            <span class="material-icons nav-icon">bar_chart</span>
+        <a href="#" class="nav-item" data-screen="stats-screen">
+            <span class="nav-icon material-icons">bar_chart</span>
             <span>Статистика</span>
         </a>
-        <a href="#" class="nav-item" data-screen="profile">
-            <span class="material-icons nav-icon">person</span>
+        <a href="#" class="nav-item" data-screen="profile-screen">
+            <span class="nav-icon material-icons">person</span>
             <span>Профиль</span>
+        </a>
+        <a href="#" class="nav-item" data-screen="settings-screen">
+            <span class="nav-icon material-icons">settings</span>
+            <span>Настройки</span>
         </a>
     </nav>
 
@@ -108,12 +149,57 @@
         let isTracking = false;
         let tg = window.Telegram.WebApp;
         let activityChart;
+        let timerState = {
+            startTime: null,
+            elapsedTime: 0
+        };
+
+        // Сохранение состояния таймера
+        function saveTimerState() {
+            if (isTracking) {
+                timerState.startTime = startTime;
+                timerState.elapsedTime = (new Date() - startTime) / 1000;
+            }
+            localStorage.setItem('timerState', JSON.stringify(timerState));
+        }
+
+        // Восстановление состояния таймера
+        function restoreTimerState() {
+            const savedState = localStorage.getItem('timerState');
+            if (savedState) {
+                timerState = JSON.parse(savedState);
+                if (timerState.startTime) {
+                    startTime = new Date(timerState.startTime);
+                    isTracking = true;
+                    startTrackingBtn.disabled = true;
+                    stopTrackingBtn.disabled = false;
+                    activityInput.disabled = true;
+                    categorySelect.disabled = true;
+                    tagsInput.disabled = true;
+                    timerInterval = setInterval(updateTimer, 1000);
+                }
+            }
+        }
+
+        // Обработка видимости страницы
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                saveTimerState();
+            } else {
+                restoreTimerState();
+            }
+        });
 
         // Инициализация темы
-        const themeToggle = document.getElementById('themeToggle');
+        const themeButtons = document.querySelectorAll('.theme-button');
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
-        themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        
+        themeButtons.forEach(button => {
+            if (button.dataset.theme === savedTheme) {
+                button.classList.add('active');
+            }
+        });
 
         // Переключение экранов
         const screens = document.querySelectorAll('.pixel-box');
@@ -135,11 +221,14 @@
         });
 
         // Переключение темы
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+        themeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const theme = button.dataset.theme;
+                document.body.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                themeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
         });
 
         // Инициализация Telegram Web App
@@ -150,8 +239,9 @@
                 if (user.photo_url) {
                     document.getElementById('userAvatar').src = user.photo_url;
                 }
-                showScreen('main');
+                showScreen('main-screen');
                 updateStats();
+                restoreTimerState();
             } else {
                 showScreen('welcome');
             }
@@ -213,6 +303,7 @@
             activityInput.disabled = false;
             categorySelect.disabled = false;
             tagsInput.disabled = false;
+            localStorage.removeItem('timerState');
 
             try {
                 const response = await fetch('/api/stop', {
@@ -264,22 +355,22 @@
                 const response = await fetch('/api/stats');
                 const data = await response.json();
                 
-                document.getElementById('totalTracks').textContent = data.total_tracks;
-                document.getElementById('totalTime').textContent = `${Math.floor(data.total_duration / 3600)} ч`;
-                document.getElementById('todayTime').textContent = `${Math.floor(data.daily_stats.total_duration / 60)} мин`;
-                document.getElementById('userLevel').textContent = data.level;
-                document.getElementById('levelProgress').style.width = `${data.xp_progress}%`;
+                document.getElementById('totalTracks').textContent = data.total_tracks || 0;
+                document.getElementById('totalTime').textContent = `${Math.floor((data.total_duration || 0) / 3600)} ч`;
+                document.getElementById('todayTime').textContent = `${Math.floor((data.daily_stats.total_duration || 0) / 60)} мин`;
+                document.getElementById('userLevel').textContent = data.level || 1;
+                document.getElementById('levelProgress').style.width = `${data.xp_progress || 0}%`;
 
                 // Обновляем график
                 initChart({
-                    labels: data.activity_data.labels,
-                    values: data.activity_data.values
+                    labels: data.activity_data.labels || [],
+                    values: data.activity_data.values || []
                 });
 
                 // Обновляем статистику по категориям
                 const categoryStats = document.getElementById('categoryStats');
                 categoryStats.innerHTML = '';
-                Object.entries(data.categories).forEach(([category, duration]) => {
+                Object.entries(data.categories || {}).forEach(([category, duration]) => {
                     const categoryBox = document.createElement('div');
                     categoryBox.className = 'pixel-category-box';
                     categoryBox.innerHTML = `
@@ -287,6 +378,20 @@
                         <p>${Math.floor(duration / 60)} мин</p>
                     `;
                     categoryStats.appendChild(categoryBox);
+                });
+
+                // Обновляем достижения
+                const achievementsList = document.getElementById('achievementsList');
+                achievementsList.innerHTML = '';
+                (data.achievements || []).forEach(achievement => {
+                    const achievementBox = document.createElement('div');
+                    achievementBox.className = 'pixel-achievement-box';
+                    achievementBox.innerHTML = `
+                        <span class="achievement-icon">${achievement.icon}</span>
+                        <h4>${achievement.name}</h4>
+                        <p>${achievement.description}</p>
+                    `;
+                    achievementsList.appendChild(achievementBox);
                 });
             } catch (error) {
                 console.error('Ошибка:', error);
