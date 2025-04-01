@@ -3,9 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
-from telegram import Bot, Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
-from telegram import WebAppData
+from telegram import Bot, Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.constants import ParseMode
 import asyncio
 import uuid
 import json
@@ -18,6 +18,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pixel_time_tracker.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
+WEBAPP_URL = os.getenv('WEBAPP_URL', 'http://localhost:5000')
 db = SQLAlchemy(app)
 
 # Модель пользователя
@@ -122,6 +123,7 @@ class Break(db.Model):
 
 # Инициализация бота Telegram
 bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
+application = ApplicationBuilder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build()
 
 @app.route('/')
 def index():
@@ -457,48 +459,158 @@ def update_settings():
     db.session.commit()
     return jsonify({'message': 'Settings updated successfully'})
 
-@app.route('/webhook', methods=['POST'])
-async def webhook():
-    data = request.get_json()
-    update = Update.de_json(data, bot)
+# Обработчики команд Telegram
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /start"""
+    user = update.effective_user
     
-    if update.message and update.message.web_app_data:
-        web_app_data = update.message.web_app_data.data
-        try:
-            data = json.loads(web_app_data)
-            user_id = update.message.from_user.id
-            activity = data.get('activity')
-            duration = data.get('duration')
+    # Создаем или получаем пользователя
+    db_user = User.query.filter_by(telegram_id=str(user.id)).first()
+    if not db_user:
+        db_user = User(
+            telegram_id=str(user.id),
+            username=user.username,
+            photo_url=user.get_profile_photos().photos[0][0].file_id if user.get_profile_photos().photos else None
+        )
+        db.session.add(db_user)
+        db.session.commit()
+    
+    # Создаем кнопку для веб-приложения
+    webapp_button = KeyboardButton(
+        text="Открыть трекер ⏱",
+        web_app=WebAppInfo(url=WEBAPP_URL)
+    )
+    keyboard = ReplyKeyboardMarkup([[webapp_button]], resize_keyboard=True)
+    
+    welcome_text = (
+        f"Привет, {user.first_name}! 👋\n\n"
+        "Я помогу тебе отслеживать время и быть продуктивнее. "
+        "Используй кнопку ниже, чтобы открыть трекер времени."
+    )
+    
+    await update.message.reply_text(welcome_text, reply_markup=keyboard)
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /help"""
+    help_text = (
+        "🔍 *Доступные команды:*\n\n"
+        "/start - Начать работу с ботом\n"
+        "/stats - Показать статистику\n"
+        "/profile - Информация о профиле\n"
+        "/settings - Настройки уведомлений\n\n"
+        "📱 Используйте кнопку 'Открыть трекер' для доступа к основному интерфейсу."
+    )
+    await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /stats"""
+    user = User.query.filter_by(telegram_id=str(update.effective_user.id)).first()
+    if not user:
+        await update.message.reply_text("Пользователь не найден. Используйте /start для начала работы.")
+        return
+    
+    # Получаем статистику за сегодня
+    today = datetime.utcnow().date()
+    today_activities = Activity.query.filter(
+        Activity.user_id == user.id,
+        db.func.date(Activity.end_time) == today
+    ).all()
+    
+    total_today = sum(activity.duration for activity in today_activities if activity.duration)
+    
+    stats_text = (
+        f"📊 *Статистика за сегодня:*\n\n"
+        f"⏱ Общее время: {total_today} минут\n"
+        f"📝 Количество активностей: {len(today_activities)}\n"
+        f"🎯 Цель на день: {user.daily_goal} минут\n"
+        f"✨ Текущий уровень: {user.level}\n"
+        f"⭐️ Опыт: {user.xp} XP"
+    )
+    
+    await update.message.reply_text(stats_text, parse_mode=ParseMode.MARKDOWN)
+
+async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /settings"""
+    user = User.query.filter_by(telegram_id=str(update.effective_user.id)).first()
+    if not user:
+        await update.message.reply_text("Пользователь не найден. Используйте /start для начала работы.")
+        return
+    
+    settings_text = (
+        f"⚙️ *Текущие настройки:*\n\n"
+        f"🔔 Уведомления: {'включены' if user.notifications else 'выключены'}\n"
+        f"🎯 Цель на день: {user.daily_goal} минут\n"
+        f"⏰ Напоминание о перерыве: каждые {user.break_reminder} минут\n"
+        f"🎨 Тема: {user.theme}\n\n"
+        "Для изменения настроек используйте веб-интерфейс."
+    )
+    
+    await update.message.reply_text(settings_text, parse_mode=ParseMode.MARKDOWN)
+
+def init_bot():
+    """Инициализация бота"""
+    application = ApplicationBuilder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build()
+    
+    # Добавляем обработчики команд
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("stats", stats_command))
+    application.add_handler(CommandHandler("settings", settings_command))
+    
+    return application
+
+# Веб-хук для Telegram
+@app.route(f"/webhook/{os.getenv('TELEGRAM_BOT_TOKEN')}", methods=['POST'])
+async def webhook():
+    """Обработчик веб-хуков от Telegram"""
+    if request.method == "POST":
+        update = Update.de_json(request.get_json(), bot)
+        
+        # Обработка данных из веб-приложения
+        if update.message and update.message.web_app_data:
+            try:
+                data = json.loads(update.message.web_app_data.data)
+                user = User.query.filter_by(telegram_id=str(update.effective_user.id)).first()
+                
+                if 'action' in data:
+                    if data['action'] == 'start_activity':
+                        activity = Activity(
+                            user_id=user.id,
+                            name=data['name'],
+                            category=data.get('category', 'other')
+                        )
+                        db.session.add(activity)
+                        db.session.commit()
+                        
+                        await update.message.reply_text(
+                            f"✅ Активность '{data['name']}' начата!",
+                            parse_mode=ParseMode.MARKDOWN
+                        )
+                    
+                    elif data['action'] == 'stop_activity':
+                        activity = Activity.query.filter_by(
+                            user_id=user.id,
+                            end_time=None
+                        ).first()
+                        
+                        if activity:
+                            activity.end_time = datetime.utcnow()
+                            activity.duration = int((activity.end_time - activity.start_time).total_seconds() / 60)
+                            db.session.commit()
+                            
+                            await update.message.reply_text(
+                                f"✅ Активность '{activity.name}' завершена!\n"
+                                f"⏱ Длительность: {activity.duration} минут",
+                                parse_mode=ParseMode.MARKDOWN
+                            )
             
-            if activity and duration:
-                # Находим или создаем пользователя
-                user = User.query.filter_by(telegram_id=str(user_id)).first()
-                if not user:
-                    user = User(telegram_id=str(user_id), username=update.message.from_user.username)
-                    db.session.add(user)
-                    db.session.commit()
-                
-                # Создаем новый трек времени
-                track = TimeTrack(
-                    user_id=user.id,
-                    activity=activity,
-                    start_time=datetime.utcnow(),
-                    duration=duration * 60  # конвертируем минуты в секунды
-                )
-                db.session.add(track)
-                db.session.commit()
-                
-                # Отправляем подтверждение пользователю
-                await bot.send_message(
-                    chat_id=user_id,
-                    text=f"✅ Активность '{activity}' на {duration} минут успешно сохранена!"
-                )
-        except Exception as e:
-            print(f"Error in webhook: {e}")
-            await bot.send_message(
-                chat_id=update.message.from_user.id,
-                text="❌ Произошла ошибка при сохранении активности. Попробуйте еще раз."
-            )
+            except Exception as e:
+                print(f"Error processing web app data: {e}")
+                await update.message.reply_text("❌ Произошла ошибка при обработке данных")
+        
+        # Применяем обновление
+        application = init_bot()
+        await application.process_update(update)
     
     return jsonify({'status': 'ok'})
 
@@ -652,4 +764,16 @@ def get_category_stats():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # Настраиваем веб-хук для бота
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        webhook_url = f"{WEBAPP_URL}/webhook/{bot_token}"
+        
+        async def setup_webhook():
+            await bot.set_webhook(webhook_url)
+            print(f"Webhook set to {webhook_url}")
+        
+        # Запускаем настройку веб-хука
+        asyncio.run(setup_webhook())
+    
     app.run(debug=True) 
