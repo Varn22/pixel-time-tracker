@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Time Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div id="welcome-screen" class="pixel-box" style="display: none;">
+            <h1 class="pixel-title">Pixel Time Tracker</h1>
+            <div class="pixel-welcome">
+                <p>Добро пожаловать в мир пиксельного трекинга времени!</p>
+                <p>Для начала работы, пожалуйста, откройте приложение через Telegram.</p>
+            </div>
+        </div>
+
+        <div id="main-screen" class="pixel-box">
+            <div class="pixel-header">
+                <h2>Привет, <span id="userDisplayName">{{ user.username if user else 'Пользователь' }}</span>!</h2>
+                <div class="pixel-achievements">
+                    <div class="pixel-achievement" id="achievement1">🎯</div>
+                    <div class="pixel-achievement" id="achievement2">⏰</div>
+                    <div class="pixel-achievement" id="achievement3">🏆</div>
+                </div>
+            </div>
+
+            <div class="pixel-timer-container">
+                <div class="pixel-timer" id="timer">00:00:00</div>
+                <div class="pixel-timer-controls">
+                    <button class="pixel-button" id="startTrackingBtn">Старт</button>
+                    <button class="pixel-button" id="stopTrackingBtn" disabled>Стоп</button>
+                </div>
+            </div>
+
+            <div class="pixel-input-group">
+                <input type="text" class="pixel-input" id="activity" placeholder="Что вы делаете?">
+                <select class="pixel-input" id="category">
+                    <option value="">Выберите категорию</option>
+                    <option value="work">Работа</option>
+                    <option value="study">Учеба</option>
+                    <option value="hobby">Хобби</option>
+                    <option value="sport">Спорт</option>
+                    <option value="other">Другое</option>
+                </select>
+                <input type="text" class="pixel-input" id="tags" placeholder="Теги (через запятую)">
+            </div>
+
+            <div class="pixel-stats-container">
+                <div class="pixel-stats-grid">
+                    <div class="pixel-stat-box">
+                        <h3>Сегодня</h3>
+                        <p id="todayTime">0 мин</p>
+                    </div>
+                    <div class="pixel-stat-box">
+                        <h3>Всего треков</h3>
+                        <p id="totalTracks">0</p>
+                    </div>
+                    <div class="pixel-stat-box">
+                        <h3>Общее время</h3>
+                        <p id="totalTime">0 ч</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pixel-categories">
+                <h3>Категории</h3>
+                <div id="categoryStats" class="pixel-category-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let startTime;
+        let timerInterval;
+        let isTracking = false;
+        let tg = window.Telegram.WebApp;
+
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const mainScreen = document.getElementById('main-screen');
+        const startTrackingBtn = document.getElementById('startTrackingBtn');
+        const stopTrackingBtn = document.getElementById('stopTrackingBtn');
+        const activityInput = document.getElementById('activity');
+        const categorySelect = document.getElementById('category');
+        const tagsInput = document.getElementById('tags');
+        const timer = document.getElementById('timer');
+        const userDisplayName = document.getElementById('userDisplayName');
+
+        // Инициализация Telegram Web App
+        document.addEventListener('DOMContentLoaded', function() {
+            if (tg.initDataUnsafe.user) {
+                mainScreen.style.display = 'block';
+                welcomeScreen.style.display = 'none';
+                userDisplayName.textContent = tg.initDataUnsafe.user.username || 'Пользователь';
+                updateStats();
+            } else {
+                mainScreen.style.display = 'none';
+                welcomeScreen.style.display = 'block';
+            }
+        });
+
+        function updateTimer() {
+            const now = new Date();
+            const diff = Math.floor((now - startTime) / 1000);
+            const hours = Math.floor(diff / 3600);
+            const minutes = Math.floor((diff % 3600) / 60);
+            const seconds = diff % 60;
+            timer.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        async function startTracking() {
+            const activity = activityInput.value;
+            const category = categorySelect.value;
+            const tags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+
+            if (!activity) {
+                alert('Пожалуйста, введите название активности');
+                return;
+            }
+
+            startTime = new Date();
+            isTracking = true;
+            startTrackingBtn.disabled = true;
+            stopTrackingBtn.disabled = false;
+            activityInput.disabled = true;
+            categorySelect.disabled = true;
+            tagsInput.disabled = true;
+
+            timerInterval = setInterval(updateTimer, 1000);
+
+            try {
+                const response = await fetch('/api/track', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        activity,
+                        category,
+                        tags
+                    }),
+                });
+                const data = await response.json();
+                console.log(data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function stopTracking() {
+            clearInterval(timerInterval);
+            isTracking = false;
+            startTrackingBtn.disabled = false;
+            stopTrackingBtn.disabled = true;
+            activityInput.disabled = false;
+            categorySelect.disabled = false;
+            tagsInput.disabled = false;
+
+            try {
+                const response = await fetch('/api/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                console.log(data);
+                updateStats();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                document.getElementById('totalTracks').textContent = data.total_tracks;
+                document.getElementById('totalTime').textContent = `${Math.floor(data.total_duration / 3600)} ч`;
+                document.getElementById('todayTime').textContent = `${Math.floor(data.daily_stats.total_duration / 60)} мин`;
+
+                // Обновляем статистику по категориям
+                const categoryStats = document.getElementById('categoryStats');
+                categoryStats.innerHTML = '';
+                Object.entries(data.categories).forEach(([category, duration]) => {
+                    const categoryBox = document.createElement('div');
+                    categoryBox.className = 'pixel-category-box';
+                    categoryBox.innerHTML = `
+                        <h4>${category}</h4>
+                        <p>${Math.floor(duration / 60)} мин</p>
+                    `;
+                    categoryStats.appendChild(categoryBox);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        startTrackingBtn.addEventListener('click', startTracking);
+        stopTrackingBtn.addEventListener('click', stopTracking);
+
+        // Анимация пиксельных элементов
+        document.querySelectorAll('.pixel-button').forEach(button => {
+            button.addEventListener('mouseover', () => {
+                button.style.transform = 'scale(1.05)';
+            });
+            button.addEventListener('mouseout', () => {
+                button.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html> 
