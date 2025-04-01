@@ -55,16 +55,17 @@ async function loadUserData() {
 
 // Загрузка категорий
 async function loadCategories() {
+    if (!currentUser || !currentUser.telegram_id) return;
     try {
-        const response = await fetch(`/api/stats/categories?user=${JSON.stringify(currentUser)}`);
+        const response = await fetch(`/api/stats/categories?user=${encodeURIComponent(JSON.stringify({ id: currentUser.telegram_id }))}`);
         if (!response.ok) {
-            throw new Error('Failed to load categories');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         const categories = await response.json();
         updateCategoriesList(categories);
     } catch (error) {
         console.error('Error loading categories:', error);
-        showError('Ошибка загрузки категорий');
+        showError('Не удалось загрузить категории.');
     }
 }
 
@@ -353,69 +354,86 @@ function stopTimer() {
 
 // Обновление настроек
 async function updateTheme(theme) {
+    if (!currentUser || !currentUser.telegram_id) return;
     document.body.className = theme;
     try {
-        await fetch('/api/settings/theme', {
+        const response = await fetch('/api/settings/theme', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                user: currentUser,
+                user: { id: currentUser.telegram_id },
                 theme: theme
             })
         });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
     } catch (error) {
         console.error('Error updating theme:', error);
+        showError('Не удалось обновить тему.');
     }
 }
 
 async function updateNotifications(enabled) {
+    if (!currentUser || !currentUser.telegram_id) return;
     try {
-        await fetch('/api/settings/notifications', {
+        const response = await fetch('/api/settings/notifications', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                user: currentUser,
+                user: { id: currentUser.telegram_id },
                 notifications: enabled
             })
         });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
     } catch (error) {
         console.error('Error updating notifications:', error);
     }
 }
 
 async function updateDailyGoal(minutes) {
+    if (!currentUser || !currentUser.telegram_id) return;
     try {
-        await fetch('/api/settings/daily_goal', {
+        const response = await fetch('/api/settings/daily_goal', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                user: currentUser,
+                user: { id: currentUser.telegram_id },
                 daily_goal: minutes
             })
         });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
     } catch (error) {
         console.error('Error updating daily goal:', error);
     }
 }
 
 async function updateBreakReminder(minutes) {
+    if (!currentUser || !currentUser.telegram_id) return;
     try {
-        await fetch('/api/settings/break_reminder', {
+        const response = await fetch('/api/settings/break_reminder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                user: currentUser,
+                user: { id: currentUser.telegram_id },
                 break_reminder: minutes
             })
         });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
     } catch (error) {
         console.error('Error updating break reminder:', error);
     }

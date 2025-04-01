@@ -14,7 +14,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:///pixel_tracker.db
+        fromDatabase:
+          name: pixel_tracker_db
+          property: connectionString
       - key: FLASK_ENV
         value: production
       - key: FLASK_DEBUG

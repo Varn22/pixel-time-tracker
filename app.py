@@ -50,7 +50,7 @@ application = Application.builder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    telegram_id = db.Column(db.Integer, unique=True)
+    telegram_id = db.Column(db.BigInteger, unique=True)
     username = db.Column(db.String(80))
     first_name = db.Column(db.String(80))
     last_name = db.Column(db.String(80))
@@ -253,67 +253,70 @@ def get_user():
     try:
         user_data = request.args.get('user')
         if not user_data:
+            logger.warning("No user data received in /api/user")
             return jsonify({'error': 'No user data'}), 400
             
         try:
             user = json.loads(user_data)
+            logger.info(f"Received user data: {user}")
         except json.JSONDecodeError:
+            logger.error("Invalid JSON data received in /api/user")
             return jsonify({'error': 'Invalid JSON data'}), 400
             
         telegram_id = user.get('id')
         
         if not telegram_id:
+            logger.warning("No Telegram ID found in user data")
             return jsonify({'error': 'No Telegram ID'}), 400
         
-        try:
-            db_user = User.query.filter_by(telegram_id=telegram_id).first()
-            if not db_user:
-                db_user = User(
-                    telegram_id=telegram_id,
-                    username=user.get('username'),
-                    first_name=user.get('first_name'),
-                    last_name=user.get('last_name')
-                )
-                db.session.add(db_user)
-                db.session.commit()
-                
-                # Создаем категории по умолчанию для нового пользователя
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            logger.info(f"User with telegram_id {telegram_id} not found. Creating new user.")
+            db_user = User(
+                telegram_id=telegram_id,
+                username=user.get('username'),
+                first_name=user.get('first_name'),
+                last_name=user.get('last_name')
+            )
+            db.session.add(db_user)
+            db.session.commit()
+            logger.info(f"User {telegram_id} created successfully.")
+            
+            # Создаем категории по умолчанию для нового пользователя
+            try:
                 default_categories = ['Работа', 'Учеба', 'Отдых', 'Спорт', 'Другое']
                 for category_name in default_categories:
                     category = Category(name=category_name, user_id=db_user.id)
                     db.session.add(category)
                 db.session.commit()
-            
-            return jsonify({
-                'id': db_user.id,
-                'username': db_user.username,
-                'first_name': db_user.first_name,
-                'last_name': db_user.last_name,
-                'level': db_user.level,
-                'xp': db_user.xp,
-                'theme': db_user.theme,
-                'notifications': db_user.notifications,
-                'daily_goal': db_user.daily_goal,
-                'break_reminder': db_user.break_reminder
-            })
-        except Exception as e:
-            logger.error(f"Database error in get_user: {str(e)}")
-            # Если произошла ошибка базы данных, возвращаем тестовые данные
-            return jsonify({
-                'id': 1,
-                'username': user.get('username'),
-                'first_name': user.get('first_name'),
-                'last_name': user.get('last_name'),
-                'level': 1,
-                'xp': 0,
-                'theme': 'light',
-                'notifications': True,
-                'daily_goal': 120,
-                'break_reminder': 60
-            })
+                logger.info(f"Default categories created for user {telegram_id}.")
+            except Exception as cat_e:
+                db.session.rollback() # Откатываем добавление категорий в случае ошибки
+                logger.error(f"Error creating default categories for user {telegram_id}: {str(cat_e)}")
+
+        else:
+             logger.info(f"User {telegram_id} found.")
+
+        # --- ОБНОВЛЯЕМ ВОЗВРАЩАЕМЫЕ ДАННЫЕ ---
+        response_data = {
+            'id': db_user.id, # Возвращаем внутренний ID базы данных
+            'telegram_id': db_user.telegram_id, # Также возвращаем telegram_id
+            'username': db_user.username,
+            'first_name': db_user.first_name,
+            'last_name': db_user.last_name,
+            'level': db_user.level,
+            'xp': db_user.xp,
+            'theme': db_user.theme,
+            'notifications': db_user.notifications,
+            'daily_goal': db_user.daily_goal,
+            'break_reminder': db_user.break_reminder
+        }
+        logger.info(f"Returning user data for {telegram_id}: {response_data}")
+        return jsonify(response_data)
+
     except Exception as e:
-        logger.error(f"Error in get_user: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Unexpected error in get_user: {str(e)}")
+        return jsonify({'error': 'An unexpected error occurred'}), 500
 
 @app.route('/api/stats/categories', methods=['GET'])
 def get_categories():
