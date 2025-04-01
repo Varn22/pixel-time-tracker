@@ -9,12 +9,28 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 import asyncio
 import threading
 import json
+import logging
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///pixel_tracker.db')
+
+# Конфигурация базы данных
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///pixel_tracker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300
+}
+
 db = SQLAlchemy(app)
 
 # Инициализация бота
@@ -206,11 +222,6 @@ def index():
 def get_user():
     try:
         # Получаем данные из Telegram WebApp
-        init_data = request.headers.get('X-Telegram-Init-Data')
-        if not init_data:
-            return jsonify({'error': 'No Telegram init data'}), 400
-            
-        # Парсим данные пользователя из init_data
         user_data = request.args.get('user')
         if not user_data:
             return jsonify({'error': 'No user data'}), 400
@@ -245,6 +256,7 @@ def get_user():
             'break_reminder': db_user.break_reminder
         })
     except Exception as e:
+        logger.error(f"Error in get_user: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stats/categories', methods=['GET'])
@@ -394,6 +406,126 @@ def finish_activity():
             'xp_earned': xp
         })
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/theme', methods=['POST'])
+def update_theme():
+    try:
+        data = request.get_json()
+        user_data = data.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+            
+        theme = data.get('theme')
+        if not theme:
+            return jsonify({'error': 'No theme specified'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        db_user.theme = theme
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error in update_theme: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/notifications', methods=['POST'])
+def update_notifications():
+    try:
+        data = request.get_json()
+        user_data = data.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+            
+        notifications = data.get('notifications')
+        if notifications is None:
+            return jsonify({'error': 'No notifications setting specified'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        db_user.notifications = notifications
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error in update_notifications: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/daily_goal', methods=['POST'])
+def update_daily_goal():
+    try:
+        data = request.get_json()
+        user_data = data.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+            
+        daily_goal = data.get('daily_goal')
+        if daily_goal is None:
+            return jsonify({'error': 'No daily goal specified'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        db_user.daily_goal = daily_goal
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error in update_daily_goal: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/settings/break_reminder', methods=['POST'])
+def update_break_reminder():
+    try:
+        data = request.get_json()
+        user_data = data.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        user = json.loads(user_data)
+        telegram_id = user.get('id')
+        
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+            
+        break_reminder = data.get('break_reminder')
+        if break_reminder is None:
+            return jsonify({'error': 'No break reminder specified'}), 400
+        
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        db_user.break_reminder = break_reminder
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error in update_break_reminder: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 def run_flask():
