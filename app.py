@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
-from telegram import Bot, Update, WebAppInfo
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Bot, Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram import WebAppData
 import asyncio
 import uuid
 import json
@@ -203,6 +204,44 @@ def check_achievements(user):
                 chat_id=user.telegram_id,
                 text=f'🎉 Поздравляем! Вы получили достижение "{achievement.name}"!\n{achievement.description}'
             ))
+
+@app.route('/webhook', methods=['POST'])
+async def webhook():
+    data = request.get_json()
+    update = Update.de_json(data, bot)
+    
+    if update.message and update.message.web_app_data:
+        web_app_data = update.message.web_app_data.data
+        # Обработка данных из веб-приложения
+        try:
+            data = json.loads(web_app_data)
+            user_id = update.message.from_user.id
+            activity = data.get('activity')
+            duration = data.get('duration')
+            
+            if activity and duration:
+                # Сохраняем активность в базу данных
+                new_activity = Activity(
+                    user_id=user_id,
+                    activity=activity,
+                    duration=duration,
+                    date=datetime.utcnow()
+                )
+                db.session.add(new_activity)
+                db.session.commit()
+                
+                # Отправляем подтверждение пользователю
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=f"✅ Активность '{activity}' на {duration} минут успешно сохранена!"
+                )
+        except Exception as e:
+            await bot.send_message(
+                chat_id=update.message.from_user.id,
+                text="❌ Произошла ошибка при сохранении активности. Попробуйте еще раз."
+            )
+    
+    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
     with app.app_context():
