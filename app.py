@@ -29,6 +29,8 @@ class User(db.Model):
     achievements = db.relationship('Achievement', backref='user', lazy=True)
     level = db.Column(db.Integer, default=1)
     xp = db.Column(db.Integer, default=0)
+    theme = db.Column(db.String(10), default='light')
+    activities = db.relationship('Activity', backref='user', lazy=True)
 
     def calculate_level(self):
         # Каждые 1000 XP = новый уровень
@@ -70,6 +72,17 @@ class Achievement(db.Model):
     def __repr__(self):
         return f'<Achievement {self.name}>'
 
+# Модель активностей
+class Activity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    name = db.Column(db.String(100))
+    category = db.Column(db.String(50))
+    tags = db.Column(db.String(200))
+    start_time = db.Column(db.DateTime)
+    end_time = db.Column(db.DateTime)
+    duration = db.Column(db.Integer)  # в секундах
+
 # Инициализация бота Telegram
 bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
 
@@ -108,12 +121,69 @@ def index():
     return render_template('index.html')
 
 @app.route('/api/track', methods=['POST'])
-def track_time():
+async def track_activity():
     data = request.json
-    user_id = session.get('user_id')
+    user_id = request.headers.get('X-Telegram-User-ID')
+    
     if not user_id:
         return jsonify({'error': 'User not authenticated'}), 401
+
+    user = User.query.filter_by(telegram_id=user_id).first()
+    if not user:
+        user = User(telegram_id=user_id)
+        db.session.add(user)
+        db.session.commit()
+
+    activity = Activity(
+        user_id=user.id,
+        name=data['activity'],
+        category=data['category'],
+        tags=','.join(data['tags']),
+        start_time=datetime.utcnow()
+    )
+    db.session.add(activity)
+    db.session.commit()
+
+    return jsonify({'message': 'Activity started'})
+
+@app.route('/api/stop', methods=['POST'])
+async def stop_activity():
+    user_id = request.headers.get('X-Telegram-User-ID')
+    
+    if not user_id:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    user = User.query.filter_by(telegram_id=user_id).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    activity = Activity.query.filter_by(
+        user_id=user.id,
+        end_time=None
+    ).first()
+
+    if activity:
+        activity.end_time = datetime.utcnow()
+        activity.duration = int((activity.end_time - activity.start_time).total_seconds())
+        db.session.commit()
+
+        # Начисление XP
+        xp_earned = activity.duration // 60  # 1 XP за каждую минуту
+        user.xp += xp_earned
+        new_level = user.calculate_level()
         
+        if new_level > user.level:
+            user.level = new_level
+            # Отправка уведомления о новом уровне
+            asyncio.run(bot.send_message(
+                chat_id=user.telegram_id,
+                text=f"🎉 Поздравляем! Вы достигли уровня {new_level}!"
+            ))
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Activity stopped',
     activity = data.get('activity')
     category = data.get('category')
     tags = data.get('tags')
