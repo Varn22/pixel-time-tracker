@@ -1,13 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-    --primary-color: #4a90e2;
-    --secondary-color: #f5f5f5;
-    --text-color: #333;
-    --border-color: #e0e0e0;
-    --success-color: #4caf50;
-    --error-color: #f44336;
-    --shadow-color: rgba(0, 0, 0, 0.1);
+    --primary-color: #5B8AF0;
+    --primary-hover: #4A7BE0;
+    --secondary-color: #f8f9fa;
+    --text-color: #2C3E50;
+    --border-color: #E1E8ED;
+    --success-color: #2ECC71;
+    --error-color: #E74C3C;
+    --shadow-color: rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
 }
 
 * {
@@ -52,24 +54,27 @@ body {
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: 12px;
     color: var(--text-color);
     text-decoration: none;
-    transition: background-color 0.2s;
+    transition: var(--transition);
     border: none;
     background: none;
     cursor: pointer;
     width: 100%;
     text-align: left;
+    font-weight: 500;
 }
 
 .nav-item:hover {
     background-color: var(--secondary-color);
+    transform: translateX(4px);
 }
 
 .nav-item.active {
     background-color: var(--primary-color);
     color: white;
+    transform: translateX(4px);
 }
 
 .nav-item svg {
@@ -154,13 +159,19 @@ body {
 
 .timer-display {
     text-align: center;
+    padding: 24px;
+    background-color: var(--secondary-color);
+    border-radius: 12px;
+    margin: 24px 0;
 }
 
 #timer {
-    font-size: 48px;
-    font-weight: 500;
-    margin-bottom: 16px;
+    font-size: 64px;
+    font-weight: 600;
+    margin-bottom: 24px;
     font-variant-numeric: tabular-nums;
+    color: var(--primary-color);
+    text-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .timer-controls {
@@ -171,13 +182,16 @@ body {
 
 /* Кнопки */
 .primary-button, .secondary-button {
-    padding: 12px 24px;
-    border-radius: 6px;
+    padding: 12px 32px;
+    border-radius: 12px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition);
     border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .primary-button {
@@ -188,14 +202,18 @@ body {
 .secondary-button {
     background-color: var(--secondary-color);
     color: var(--text-color);
+    border: 2px solid var(--border-color);
 }
 
 .primary-button:hover {
-    background-color: #357abd;
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .secondary-button:hover {
-    background-color: #e8e8e8;
+    background-color: var(--border-color);
+    transform: translateY(-2px);
 }
 
 /* График активности */
@@ -232,8 +250,15 @@ body {
 
 .chart-bar {
     background-color: var(--primary-color);
-    border-radius: 4px 4px 0 0;
-    transition: height 0.3s;
+    border-radius: 6px 6px 0 0;
+    transition: var(--transition);
+    opacity: 0.8;
+    min-height: 4px;
+}
+
+.chart-bar:hover {
+    opacity: 1;
+    transform: scaleY(1.05);
 }
 
 /* Плавающая кнопка */
@@ -266,10 +291,22 @@ body {
     right: 24px;
     background-color: var(--error-color);
     color: white;
-    padding: 12px 24px;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px var(--shadow-color);
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--shadow-color);
     z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 .hidden {

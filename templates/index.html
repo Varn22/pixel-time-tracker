@@ -66,8 +66,19 @@
                     <div class="timer-display">
                         <div id="timer">00:00:00</div>
                         <div class="timer-controls">
-                            <button id="startTaskBtn" class="primary-button">Начать</button>
-                            <button id="finishTaskBtn" class="secondary-button hidden">Завершить</button>
+                            <button id="startTaskBtn" class="primary-button">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                Начать
+                            </button>
+                            <button id="finishTaskBtn" class="secondary-button hidden">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                                Завершить
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -89,11 +100,22 @@
                 <h2>Статистика</h2>
                 <div class="stats-container">
                     <div class="stats-card">
-                        <h3>За сегодня</h3>
+                        <h3>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            За сегодня
+                        </h3>
                         <div id="todayStats"></div>
                     </div>
                     <div class="stats-card">
-                        <h3>За неделю</h3>
+                        <h3>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                            За неделю
+                        </h3>
                         <div id="weekStats"></div>
                     </div>
                 </div>

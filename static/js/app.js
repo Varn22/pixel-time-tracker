@@ -5,9 +5,15 @@ let seconds = 0;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+        showError('Ошибка инициализации Telegram WebApp');
+        return;
+    }
+    
     initializeApp();
     setupEventListeners();
     loadUserData();
+    loadCategories();
 });
 
 // Инициализация приложения
@@ -56,22 +62,30 @@ async function loadUserData() {
 
 // Обновление интерфейса данными пользователя
 function updateUserInterface(userData) {
-    // Обновляем имя пользователя
+    // Обновляем имя пользователя (обрезаем длинные имена)
+    const username = tg.initDataUnsafe.user.username || 'Пользователь';
+    const displayName = username.length > 15 ? username.substring(0, 12) + '...' : username;
+    
     const usernameElement = document.getElementById('username');
     if (usernameElement) {
-        usernameElement.textContent = tg.initDataUnsafe.user.username || 'Пользователь';
+        usernameElement.textContent = displayName;
+        usernameElement.title = username; // Показываем полное имя при наведении
     }
 
     // Обновляем профиль
     const profileUsername = document.getElementById('profileUsername');
     if (profileUsername) {
-        profileUsername.textContent = tg.initDataUnsafe.user.username || 'Пользователь';
+        profileUsername.textContent = username;
     }
 
     // Обновляем аватар
     const userAvatar = document.getElementById('userAvatar');
-    if (userAvatar && tg.initDataUnsafe.user.photo_url) {
-        userAvatar.src = tg.initDataUnsafe.user.photo_url;
+    if (userAvatar) {
+        if (tg.initDataUnsafe.user.photo_url) {
+            userAvatar.src = tg.initDataUnsafe.user.photo_url;
+        } else {
+            userAvatar.src = 'https://via.placeholder.com/100?text=' + username.charAt(0).toUpperCase();
+        }
     }
 
     // Обновляем уровень и опыт
@@ -210,7 +224,7 @@ function updateActivityChart(hours, durations) {
     const chartContainer = document.getElementById('activityChart');
     chartContainer.innerHTML = '';
     
-    const maxDuration = Math.max(...durations);
+    const maxDuration = Math.max(...durations, 60); // Минимальная высота для пустых столбцов
     
     hours.forEach((hour, index) => {
         const column = document.createElement('div');
@@ -218,8 +232,12 @@ function updateActivityChart(hours, durations) {
         
         const bar = document.createElement('div');
         bar.className = 'chart-bar';
-        const height = maxDuration > 0 ? (durations[index] / maxDuration) * 100 : 0;
+        const height = (durations[index] / maxDuration) * 100;
         bar.style.height = `${height}%`;
+        
+        // Добавляем тултип с информацией
+        const minutes = Math.round(durations[index]);
+        bar.title = `${hour}:00 - ${minutes} мин.`;
         
         column.setAttribute('data-time', hour);
         column.appendChild(bar);
