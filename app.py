@@ -184,62 +184,11 @@ async def stop_activity():
 
         return jsonify({
             'message': 'Activity stopped',
-    activity = data.get('activity')
-    category = data.get('category')
-    tags = data.get('tags')
-    
-    if not activity:
-        return jsonify({'error': 'Missing activity'}), 400
-    
-    track = TimeTrack(
-        user_id=user_id,
-        activity=activity,
-        category=category,
-        tags=tags,
-        start_time=datetime.now()
-    )
-    db.session.add(track)
-    db.session.commit()
-    
-    return jsonify({'message': 'Time tracking started'})
+            'duration': activity.duration,
+            'xp_earned': xp_earned
+        })
 
-@app.route('/api/stop', methods=['POST'])
-def stop_tracking():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'User not authenticated'}), 401
-    
-    track = TimeTrack.query.filter_by(
-        user_id=user_id,
-        end_time=None
-    ).first()
-    
-    if track:
-        track.end_time = datetime.now()
-        track.duration = int((track.end_time - track.start_time).total_seconds())
-        
-        # Обновляем общее время пользователя
-        user = User.query.get(user_id)
-        user.total_time += track.duration
-        
-        # Добавляем XP (1 минута = 1 XP)
-        xp_earned = track.duration // 60
-        user.add_xp(xp_earned)
-        
-        # Проверяем достижения
-        check_achievements(user_id)
-        
-        db.session.commit()
-        
-        # Отправка уведомления в Telegram
-        asyncio.run(bot.send_message(
-            chat_id=user.telegram_id,
-            text=f'Трек времени завершен!\nАктивность: {track.activity}\nДлительность: {track.duration // 60} минут\nПолучено XP: {xp_earned}'
-        ))
-        
-        return jsonify({'message': 'Time tracking stopped'})
-    
-    return jsonify({'error': 'No active tracking found'}), 404
+    return jsonify({'error': 'No active activity found'}), 404
 
 @app.route('/api/stats')
 def get_stats():
