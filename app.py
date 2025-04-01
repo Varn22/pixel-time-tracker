@@ -27,6 +27,25 @@ class User(db.Model):
     time_tracks = db.relationship('TimeTrack', backref='user', lazy=True)
     total_time = db.Column(db.Integer, default=0)
     achievements = db.relationship('Achievement', backref='user', lazy=True)
+    level = db.Column(db.Integer, default=1)
+    xp = db.Column(db.Integer, default=0)
+
+    def calculate_level(self):
+        # Каждые 1000 XP = новый уровень
+        new_level = (self.xp // 1000) + 1
+        if new_level != self.level:
+            self.level = new_level
+            # Отправляем уведомление о новом уровне
+            asyncio.run(bot.send_message(
+                chat_id=self.telegram_id,
+                text=f"🎉 Поздравляем! Вы достигли уровня {self.level}!"
+            ))
+        return self.level
+
+    def add_xp(self, amount):
+        self.xp += amount
+        self.calculate_level()
+        db.session.commit()
 
 # Модель для хранения треков времени
 class TimeTrack(db.Model):
@@ -133,6 +152,10 @@ def stop_tracking():
         user = User.query.get(user_id)
         user.total_time += track.duration
         
+        # Добавляем XP (1 минута = 1 XP)
+        xp_earned = track.duration // 60
+        user.add_xp(xp_earned)
+        
         # Проверяем достижения
         check_achievements(user_id)
         
@@ -141,7 +164,7 @@ def stop_tracking():
         # Отправка уведомления в Telegram
         asyncio.run(bot.send_message(
             chat_id=user.telegram_id,
-            text=f'Трек времени завершен!\nАктивность: {track.activity}\nДлительность: {track.duration} секунд'
+            text=f'Трек времени завершен!\nАктивность: {track.activity}\nДлительность: {track.duration // 60} минут\nПолучено XP: {xp_earned}'
         ))
         
         return jsonify({'message': 'Time tracking stopped'})
@@ -346,6 +369,66 @@ def profile():
                          total_time=total_time,
                          total_activities=total_activities,
                          unique_activities=unique_activities)
+
+@app.route('/stats')
+def stats():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user = User.query.get(session['user_id'])
+    achievements = Achievement.query.filter_by(user_id=user.id).all()
+    
+    # Получаем данные для графиков
+    today = datetime.now()
+    last_7_days = [(today - timedelta(days=i)).date() for i in range(6, -1, -1)]
+    
+    activity_data = {}
+    activity_minutes = []
+    activity_dates = []
+    
+    for date in last_7_days:
+        tracks = TimeTrack.query.filter(
+            TimeTrack.user_id == user.id,
+            db.func.date(TimeTrack.start_time) == date
+        ).all()
+        
+        total_minutes = sum(track.duration or 0 for track in tracks) // 60
+        activity_data[date.day] = total_minutes
+        activity_minutes.append(total_minutes)
+        activity_dates.append(date.strftime('%d.%m'))
+    
+    # Получаем топ активностей
+    top_activities = db.session.query(
+        TimeTrack.activity,
+        db.func.sum(TimeTrack.duration).label('total_duration')
+    ).filter(
+        TimeTrack.user_id == user.id
+    ).group_by(
+        TimeTrack.activity
+    ).order_by(
+        db.desc('total_duration')
+    ).limit(5).all()
+    
+    top_activities_labels = [activity for activity, _ in top_activities]
+    top_activities_data = [duration // 60 for _, duration in top_activities]
+    
+    # Рассчитываем прогресс уровня
+    current_xp = user.xp
+    next_level_xp = (user.level * 1000)
+    xp_percentage = (current_xp % 1000) / 10
+    
+    return render_template('stats.html',
+                         user=user,
+                         achievements=achievements,
+                         activity_dates=activity_dates,
+                         activity_minutes=activity_minutes,
+                         calendar_data=activity_data,
+                         top_activities_labels=top_activities_labels,
+                         top_activities_data=top_activities_data,
+                         level=user.level,
+                         current_xp=current_xp,
+                         next_level_xp=next_level_xp,
+                         xp_percentage=xp_percentage)
 
 if __name__ == '__main__':
     with app.app_context():
