@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="stats-container">
+    <div class="stats-header">
+        <h1>Статистика активности</h1>
+        <div class="level-info">
+            <div class="level-circle">
+                <span class="level-number">{{ level }}</span>
+                <span class="level-label">Уровень</span>
+            </div>
+            <div class="xp-bar">
+                <div class="xp-progress" style="width: {{ xp_percentage }}%"></div>
+            </div>
+            <div class="xp-text">
+                {{ current_xp }}/{{ next_level_xp }} XP
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stats-card">
+            <h2>Активность по дням</h2>
+            <canvas id="activityChart"></canvas>
+        </div>
+        <div class="stats-card">
+            <h2>Календарь активности</h2>
+            <div class="calendar" id="activityCalendar"></div>
+        </div>
+        <div class="stats-card">
+            <h2>Топ активностей</h2>
+            <canvas id="topActivitiesChart"></canvas>
+        </div>
+        <div class="stats-card">
+            <h2>Достижения</h2>
+            <div class="achievements-list">
+                {% for achievement in achievements %}
+                <div class="achievement-item">
+                    <span class="achievement-icon">{{ achievement.icon }}</span>
+                    <div class="achievement-info">
+                        <div class="achievement-name">{{ achievement.description }}</div>
+                        <div class="achievement-date">{{ achievement.earned_at.strftime('%d.%m.%Y') }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.level-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.level-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.level-number {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.level-label {
+    font-size: 12px;
+}
+
+.xp-bar {
+    width: 200px;
+    height: 20px;
+    background: #eee;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.xp-progress {
+    height: 100%;
+    background: var(--success-color);
+    transition: width 0.3s ease;
+}
+
+.xp-text {
+    font-size: 14px;
+    color: #666;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stats-card h2 {
+    font-size: 16px;
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    background: #f8f9fa;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.calendar-day:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.calendar-day.active {
+    background: var(--success-color);
+    color: white;
+}
+
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.achievement-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.achievement-icon {
+    font-size: 24px;
+}
+
+.achievement-info {
+    flex: 1;
+}
+
+.achievement-name {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.achievement-date {
+    font-size: 10px;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-header {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .level-info {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// График активности по дням
+const activityCtx = document.getElementById('activityChart').getContext('2d');
+new Chart(activityCtx, {
+    type: 'line',
+    data: {
+        labels: {{ activity_dates|tojson }},
+        datasets: [{
+            label: 'Минуты активности',
+            data: {{ activity_minutes|tojson }},
+            borderColor: '#4a90e2',
+            tension: 0.4,
+            fill: true,
+            backgroundColor: 'rgba(74, 144, 226, 0.1)'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 30
+                }
+            }
+        }
+    }
+});
+
+// График топ активностей
+const topActivitiesCtx = document.getElementById('topActivitiesChart').getContext('2d');
+new Chart(topActivitiesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ top_activities_labels|tojson }},
+        datasets: [{
+            data: {{ top_activities_data|tojson }},
+            backgroundColor: [
+                '#4a90e2',
+                '#f39c12',
+                '#2ecc71',
+                '#e74c3c',
+                '#9b59b6'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+// Календарь активности
+const calendar = document.getElementById('activityCalendar');
+const activityData = {{ calendar_data|tojson }};
+
+// Создаем дни календаря
+for (let i = 1; i <= 31; i++) {
+    const day = document.createElement('div');
+    day.className = 'calendar-day';
+    day.textContent = i;
+    
+    if (activityData[i]) {
+        day.classList.add('active');
+        day.title = `${activityData[i]} минут активности`;
+    }
+    
+    calendar.appendChild(day);
+}
+</script>
+{% endblock %} 
