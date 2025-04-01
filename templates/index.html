@@ -26,11 +26,16 @@
                     <button class="pixel-button" id="startBtn">Старт</button>
                     <button class="pixel-button" id="stopBtn" disabled>Стоп</button>
                     <button class="pixel-button" id="resetBtn">Сброс</button>
+                    <button class="pixel-button" id="breakBtn" disabled>Перерыв</button>
                 </div>
             </div>
 
             <div class="pixel-input-group">
                 <input type="text" class="pixel-input" id="activityInput" placeholder="Введите название активности">
+                <select class="pixel-input" id="categorySelect">
+                    <option value="">Выберите категорию</option>
+                </select>
+                <input type="text" class="pixel-input" id="tagsInput" placeholder="Теги (через запятую)">
                 <button class="pixel-button" id="addActivityBtn">Добавить</button>
             </div>
 
@@ -48,6 +53,10 @@
                     <div class="pixel-stat-box">
                         <h3>Опыт</h3>
                         <p id="userXP">0/100</p>
+                    </div>
+                    <div class="pixel-stat-box">
+                        <h3>Цель на день</h3>
+                        <p id="dailyGoal">120 мин</p>
                     </div>
                 </div>
             </div>
@@ -75,6 +84,14 @@
                     <h3>Активностей</h3>
                     <p id="activitiesCount">0</p>
                 </div>
+                <div class="pixel-stat-box">
+                    <h3>Продуктивность</h3>
+                    <p id="productivityScore">0/5</p>
+                </div>
+            </div>
+
+            <div class="pixel-chart-container">
+                <canvas id="activityChart"></canvas>
             </div>
 
             <div class="pixel-achievements">
@@ -97,6 +114,18 @@
                     </div>
                     <p>Опыт: <span id="profileXP">0/100</span></p>
                 </div>
+
+                <div class="pixel-settings">
+                    <h3>Настройки</h3>
+                    <div class="setting-item">
+                        <label>Цель на день (мин)</label>
+                        <input type="number" id="dailyGoalInput" min="0" max="1440">
+                    </div>
+                    <div class="setting-item">
+                        <label>Напоминание о перерыве (мин)</label>
+                        <input type="number" id="breakReminderInput" min="0" max="120">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -118,6 +147,19 @@
                         <input type="checkbox" id="notificationsToggle">
                         <span class="slider"></span>
                     </label>
+                </div>
+
+                <div class="setting-item">
+                    <h3>Напоминания</h3>
+                    <div id="remindersList">
+                        <!-- Напоминания будут добавлены динамически -->
+                    </div>
+                    <button class="pixel-button" id="addReminderBtn">Добавить напоминание</button>
+                </div>
+
+                <div class="setting-item">
+                    <h3>Экспорт данных</h3>
+                    <button class="pixel-button" id="exportBtn">Скачать Excel</button>
                 </div>
             </div>
         </div>
@@ -142,11 +184,43 @@
         </a>
     </nav>
 
+    <!-- Модальное окно для добавления напоминания -->
+    <div id="reminderModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Добавить напоминание</h3>
+            <div class="form-group">
+                <label>Активность</label>
+                <input type="text" id="reminderActivityInput" class="pixel-input">
+            </div>
+            <div class="form-group">
+                <label>Время</label>
+                <input type="time" id="reminderTimeInput" class="pixel-input">
+            </div>
+            <div class="form-group">
+                <label>Дни недели</label>
+                <div class="weekdays-selector">
+                    <label><input type="checkbox" value="1"> Пн</label>
+                    <label><input type="checkbox" value="2"> Вт</label>
+                    <label><input type="checkbox" value="3"> Ср</label>
+                    <label><input type="checkbox" value="4"> Чт</label>
+                    <label><input type="checkbox" value="5"> Пт</label>
+                    <label><input type="checkbox" value="6"> Сб</label>
+                    <label><input type="checkbox" value="7"> Вс</label>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="pixel-button" id="saveReminderBtn">Сохранить</button>
+                <button class="pixel-button" id="cancelReminderBtn">Отмена</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let startTime;
         let timerInterval;
         let isTracking = false;
+        let currentBreak = null;
         let tg = window.Telegram.WebApp;
         let activityChart;
         let timerState = {
@@ -171,8 +245,9 @@
                 if (timerState.startTime) {
                     startTime = new Date(timerState.startTime);
                     isTracking = true;
-                    startTrackingBtn.disabled = true;
-                    stopTrackingBtn.disabled = false;
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    breakBtn.disabled = false;
                     activityInput.disabled = true;
                     categorySelect.disabled = true;
                     tagsInput.disabled = true;
@@ -210,6 +285,12 @@
             document.getElementById(`${screenId}-screen`).style.display = 'block';
             navItems.forEach(item => item.classList.remove('active'));
             document.querySelector(`[data-screen="${screenId}"]`).classList.add('active');
+            
+            if (screenId === 'stats-screen') {
+                updateStats();
+            } else if (screenId === 'profile-screen') {
+                loadUserProfile();
+            }
         }
 
         navItems.forEach(item => {
@@ -241,6 +322,8 @@
                 }
                 showScreen('main-screen');
                 updateStats();
+                loadCategories();
+                loadReminders();
                 restoreTimerState();
             } else {
                 showScreen('welcome');
@@ -268,8 +351,9 @@
 
             startTime = new Date();
             isTracking = true;
-            startTrackingBtn.disabled = true;
-            stopTrackingBtn.disabled = false;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            breakBtn.disabled = false;
             activityInput.disabled = true;
             categorySelect.disabled = true;
             tagsInput.disabled = true;
@@ -277,15 +361,15 @@
             timerInterval = setInterval(updateTimer, 1000);
 
             try {
-                const response = await fetch('/api/track', {
+                const response = await fetch('/api/activity', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        activity,
-                        category,
-                        tags
+                        name: activity,
+                        category_id: category,
+                        tags: tags
                     }),
                 });
                 const data = await response.json();
@@ -298,8 +382,9 @@
         async function stopTracking() {
             clearInterval(timerInterval);
             isTracking = false;
-            startTrackingBtn.disabled = false;
-            stopTrackingBtn.disabled = true;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            breakBtn.disabled = true;
             activityInput.disabled = false;
             categorySelect.disabled = false;
             tagsInput.disabled = false;
@@ -319,6 +404,171 @@
                 console.error('Ошибка:', error);
             }
         }
+
+        async function startBreak() {
+            if (!currentBreak) {
+                try {
+                    const response = await fetch('/api/break', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            activity_id: currentActivityId,
+                            type: 'short'
+                        }),
+                    });
+                    const data = await response.json();
+                    currentBreak = data.break_id;
+                    breakBtn.textContent = 'Завершить перерыв';
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                }
+            } else {
+                try {
+                    const response = await fetch(`/api/break/${currentBreak}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    const data = await response.json();
+                    currentBreak = null;
+                    breakBtn.textContent = 'Перерыв';
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                }
+            }
+        }
+
+        // Загрузка категорий
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories');
+                const categories = await response.json();
+                
+                const categorySelect = document.getElementById('categorySelect');
+                categorySelect.innerHTML = '<option value="">Выберите категорию</option>';
+                categories.forEach(category => {
+                    categorySelect.innerHTML += `
+                        <option value="${category.id}">${category.icon} ${category.name}</option>
+                    `;
+                });
+
+                const categoryGrid = document.getElementById('categoryGrid');
+                categoryGrid.innerHTML = '';
+                categories.forEach(category => {
+                    categoryGrid.innerHTML += `
+                        <div class="pixel-category-box" style="border-color: ${category.color}">
+                            <span class="category-icon">${category.icon}</span>
+                            <h4>${category.name}</h4>
+                            <p id="category-${category.id}-time">0 мин</p>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        // Загрузка напоминаний
+        async function loadReminders() {
+            try {
+                const response = await fetch('/api/reminders');
+                const reminders = await response.json();
+                
+                const remindersList = document.getElementById('remindersList');
+                remindersList.innerHTML = '';
+                reminders.forEach(reminder => {
+                    remindersList.innerHTML += `
+                        <div class="reminder-item">
+                            <span class="reminder-time">${reminder.time}</span>
+                            <span class="reminder-activity">${reminder.activity_name}</span>
+                            <span class="reminder-days">${reminder.days.join(', ')}</span>
+                            <button class="delete-reminder" data-id="${reminder.id}">×</button>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        // Загрузка профиля пользователя
+        async function loadUserProfile() {
+            try {
+                const response = await fetch('/api/user');
+                const user = await response.json();
+                
+                document.getElementById('dailyGoalInput').value = user.daily_goal;
+                document.getElementById('breakReminderInput').value = user.break_reminder;
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        // Экспорт данных
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/export');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pixel_time_tracker_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        });
+
+        // Модальное окно напоминаний
+        const reminderModal = document.getElementById('reminderModal');
+        const addReminderBtn = document.getElementById('addReminderBtn');
+        const saveReminderBtn = document.getElementById('saveReminderBtn');
+        const cancelReminderBtn = document.getElementById('cancelReminderBtn');
+
+        addReminderBtn.addEventListener('click', () => {
+            reminderModal.style.display = 'block';
+        });
+
+        cancelReminderBtn.addEventListener('click', () => {
+            reminderModal.style.display = 'none';
+        });
+
+        saveReminderBtn.addEventListener('click', async () => {
+            const activity = document.getElementById('reminderActivityInput').value;
+            const time = document.getElementById('reminderTimeInput').value;
+            const days = Array.from(document.querySelectorAll('.weekdays-selector input:checked'))
+                .map(input => input.value);
+
+            if (!activity || !time || days.length === 0) {
+                alert('Заполните все поля');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/reminders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        activity_name: activity,
+                        time: time,
+                        days: days
+                    }),
+                });
+                const data = await response.json();
+                reminderModal.style.display = 'none';
+                loadReminders();
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        });
 
         // Инициализация графика
         function initChart(data) {
@@ -355,51 +605,42 @@
                 const response = await fetch('/api/stats');
                 const data = await response.json();
                 
-                document.getElementById('totalTracks').textContent = data.total_tracks || 0;
-                document.getElementById('totalTime').textContent = `${Math.floor((data.total_duration || 0) / 3600)} ч`;
-                document.getElementById('todayTime').textContent = `${Math.floor((data.daily_stats.total_duration || 0) / 60)} мин`;
+                document.getElementById('totalTime').textContent = `${Math.floor((data.total_duration || 0) / 60)} мин`;
+                document.getElementById('weekTime').textContent = `${Math.floor((data.total_duration || 0) / 60)} мин`;
+                document.getElementById('dayTime').textContent = `${data.today_duration || 0} мин`;
+                document.getElementById('activitiesCount').textContent = data.activities_count || 0;
                 document.getElementById('userLevel').textContent = data.level || 1;
+                document.getElementById('userXP').textContent = `${data.xp || 0}/100`;
+                document.getElementById('dailyGoal').textContent = `${data.daily_goal || 120} мин`;
                 document.getElementById('levelProgress').style.width = `${data.xp_progress || 0}%`;
 
                 // Обновляем график
                 initChart({
-                    labels: data.activity_data.labels || [],
-                    values: data.activity_data.values || []
+                    labels: Object.keys(data.daily_stats || {}),
+                    values: Object.values(data.daily_stats || {})
                 });
 
                 // Обновляем статистику по категориям
-                const categoryStats = document.getElementById('categoryStats');
-                categoryStats.innerHTML = '';
-                Object.entries(data.categories || {}).forEach(([category, duration]) => {
-                    const categoryBox = document.createElement('div');
-                    categoryBox.className = 'pixel-category-box';
-                    categoryBox.innerHTML = `
-                        <h4>${category}</h4>
-                        <p>${Math.floor(duration / 60)} мин</p>
-                    `;
-                    categoryStats.appendChild(categoryBox);
+                Object.entries(data.category_stats || {}).forEach(([category, duration]) => {
+                    const categoryElement = document.getElementById(`category-${category}-time`);
+                    if (categoryElement) {
+                        categoryElement.textContent = `${Math.floor(duration / 60)} мин`;
+                    }
                 });
 
-                // Обновляем достижения
-                const achievementsList = document.getElementById('achievementsList');
-                achievementsList.innerHTML = '';
-                (data.achievements || []).forEach(achievement => {
-                    const achievementBox = document.createElement('div');
-                    achievementBox.className = 'pixel-achievement-box';
-                    achievementBox.innerHTML = `
-                        <span class="achievement-icon">${achievement.icon}</span>
-                        <h4>${achievement.name}</h4>
-                        <p>${achievement.description}</p>
-                    `;
-                    achievementsList.appendChild(achievementBox);
-                });
+                // Обновляем статистику продуктивности
+                const productivityScore = Object.entries(data.productivity_stats || {})
+                    .reduce((acc, [score, count]) => acc + (parseInt(score) * count), 0) /
+                    Object.values(data.productivity_stats || {}).reduce((a, b) => a + b, 0) || 0;
+                document.getElementById('productivityScore').textContent = `${productivityScore.toFixed(1)}/5`;
             } catch (error) {
                 console.error('Ошибка:', error);
             }
         }
 
-        startTrackingBtn.addEventListener('click', startTracking);
-        stopTrackingBtn.addEventListener('click', stopTracking);
+        startBtn.addEventListener('click', startTracking);
+        stopBtn.addEventListener('click', stopTracking);
+        breakBtn.addEventListener('click', startBreak);
 
         // Анимация пиксельных элементов
         document.querySelectorAll('.pixel-button').forEach(button => {
