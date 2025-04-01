@@ -212,7 +212,6 @@ async def webhook():
     
     if update.message and update.message.web_app_data:
         web_app_data = update.message.web_app_data.data
-        # Обработка данных из веб-приложения
         try:
             data = json.loads(web_app_data)
             user_id = update.message.from_user.id
@@ -220,14 +219,21 @@ async def webhook():
             duration = data.get('duration')
             
             if activity and duration:
-                # Сохраняем активность в базу данных
-                new_activity = Activity(
-                    user_id=user_id,
+                # Находим или создаем пользователя
+                user = User.query.filter_by(telegram_id=str(user_id)).first()
+                if not user:
+                    user = User(telegram_id=str(user_id), username=update.message.from_user.username)
+                    db.session.add(user)
+                    db.session.commit()
+                
+                # Создаем новый трек времени
+                track = TimeTrack(
+                    user_id=user.id,
                     activity=activity,
-                    duration=duration,
-                    date=datetime.utcnow()
+                    start_time=datetime.utcnow(),
+                    duration=duration * 60  # конвертируем минуты в секунды
                 )
-                db.session.add(new_activity)
+                db.session.add(track)
                 db.session.commit()
                 
                 # Отправляем подтверждение пользователю
@@ -236,6 +242,7 @@ async def webhook():
                     text=f"✅ Активность '{activity}' на {duration} минут успешно сохранена!"
                 )
         except Exception as e:
+            print(f"Error in webhook: {e}")
             await bot.send_message(
                 chat_id=update.message.from_user.id,
                 text="❌ Произошла ошибка при сохранении активности. Попробуйте еще раз."
