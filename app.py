@@ -21,12 +21,11 @@ app = Flask(__name__)
 
 # Конфигурация базы данных
 database_url = os.getenv('DATABASE_URL')
-if database_url and database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-
-# Добавляем обработку SSL для Render
 if database_url:
-    database_url += '?sslmode=require'
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    if '?' not in database_url:
+        database_url += '?sslmode=require'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///pixel_tracker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -34,11 +33,13 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
     'pool_recycle': 300,
     'pool_size': 5,
-    'max_overflow': 10,
-    'connect_args': {
-        'sslmode': 'require'
-    } if database_url else {}
+    'max_overflow': 10
 }
+
+if database_url:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']['connect_args'] = {
+        'sslmode': 'require'
+    }
 
 db = SQLAlchemy(app)
 
@@ -117,22 +118,34 @@ class Achievement(db.Model):
 def init_db():
     with app.app_context():
         try:
-            db.create_all()
-            logger.info("Database initialized successfully")
+            # Проверяем подключение к базе данных
+            db.engine.connect()
+            logger.info("Database connection successful")
             
-            # Создаем категории по умолчанию для каждого пользователя
-            users = User.query.all()
-            default_categories = ['Работа', 'Учеба', 'Отдых', 'Спорт', 'Другое']
-            for user in users:
-                existing_categories = [cat.name for cat in user.categories]
-                for category_name in default_categories:
-                    if category_name not in existing_categories:
-                        category = Category(name=category_name, user_id=user.id)
-                        db.session.add(category)
-            db.session.commit()
-            logger.info("Default categories created")
+            # Создаем таблицы
+            db.create_all()
+            logger.info("Database tables created successfully")
+            
+            try:
+                # Создаем категории по умолчанию для каждого пользователя
+                users = User.query.all()
+                default_categories = ['Работа', 'Учеба', 'Отдых', 'Спорт', 'Другое']
+                for user in users:
+                    existing_categories = [cat.name for cat in user.categories]
+                    for category_name in default_categories:
+                        if category_name not in existing_categories:
+                            category = Category(name=category_name, user_id=user.id)
+                            db.session.add(category)
+                db.session.commit()
+                logger.info("Default categories created")
+            except Exception as e:
+                logger.warning(f"Error creating default categories: {str(e)}")
+                # Не прерываем выполнение, если не удалось создать категории
+                
         except Exception as e:
             logger.error(f"Error initializing database: {str(e)}")
+            if 'psycopg2' in str(e):
+                logger.error("PostgreSQL connection error. Check DATABASE_URL and database availability")
             raise
 
 # Обработчики команд Telegram

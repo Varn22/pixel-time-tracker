@@ -3,7 +3,7 @@ services:
     name: pixel-time-tracker
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --workers 4 --timeout 120
+    startCommand: gunicorn app:app --workers 4 --timeout 120 --log-level debug
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
@@ -25,6 +25,8 @@ services:
         value: 4
       - key: GUNICORN_TIMEOUT
         value: 120
+      - key: PYTHONUNBUFFERED
+        value: true
 
 databases:
   - name: pixel_tracker_db
