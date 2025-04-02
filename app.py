@@ -239,6 +239,15 @@ class Achievement(db.Model):
 def init_db():
     with app.app_context():
         try:
+            # Логируем URL базы данных (без пароля)
+            db_url = os.getenv('DATABASE_URL', '')
+            if db_url:
+                masked_url = db_url.replace(db_url.split('@')[0].split(':')[2], '****')
+                logger.info(f"Attempting to connect to database: {masked_url}")
+            else:
+                logger.error("DATABASE_URL not found in environment variables")
+                return
+            
             # Проверяем подключение к базе данных
             db.engine.connect()
             logger.info("Database connection successful")
@@ -260,14 +269,12 @@ def init_db():
                 db.session.commit()
                 logger.info("Default categories created")
             except Exception as e:
-                logger.warning(f"Error creating default categories: {str(e)}")
-                # Не прерываем выполнение, если не удалось создать категории
+                logger.error(f"Error creating default categories: {str(e)}")
+                db.session.rollback()
                 
         except Exception as e:
             logger.error(f"Error initializing database: {str(e)}")
-            # В Production режиме не прерываем запуск приложения из-за ошибки БД
-            if os.getenv('FLASK_ENV') != 'production':
-                raise
+            raise
 
 @app.route('/')
 def index():
