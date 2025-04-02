@@ -14,7 +14,4 @@ PYTHON_VERSION = "3.10.0"
 PYTHONUNBUFFERED = "1"
 LOG_LEVEL = "INFO"
 PYTHONPATH = "/app"
-
-[[deploy.env]]
-name = "DATABASE_URL"
-value = "postgresql://postgres:postgres@localhost:5432/railway" 
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/railway" 
