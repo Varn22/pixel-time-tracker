@@ -1,4 +1,4 @@
-from app import application
+from app import application, app
 from telegram import Update
 import logging
 import os
@@ -20,9 +20,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# Создаем Flask приложение для health check
-app = Flask(__name__)
 
 @app.route('/')
 def health_check():
@@ -108,11 +105,12 @@ def main():
         flask_thread.daemon = True
         flask_thread.start()
         
-        # Запускаем бота
-        application.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=Update.ALL_TYPES
-        )
+        # Запускаем бота в контексте приложения
+        with app.app_context():
+            application.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=Update.ALL_TYPES
+            )
     except Exception as e:
         logger.error(f"Error running bot: {str(e)}")
         if "401 Unauthorized" in str(e):

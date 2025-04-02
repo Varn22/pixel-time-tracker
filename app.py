@@ -50,50 +50,40 @@ if database_url:
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# Декоратор для работы с контекстом приложения
+def with_app_context(f):
+    @wraps(f)
+    async def decorated_function(*args, **kwargs):
+        with app.app_context():
+            return await f(*args, **kwargs)
+    return decorated_function
+
 # Обработчики команд Telegram
+@with_app_context
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /start"""
     user = update.effective_user
-    
-    # Создаем или получаем пользователя
     db_user = User.query.filter_by(telegram_id=user.id).first()
+    
     if not db_user:
-        db_user = User(
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name
-        )
+        db_user = User(telegram_id=user.id, username=user.username)
         db.session.add(db_user)
         db.session.commit()
+        
+        # Создаем категории по умолчанию
+        default_categories = [
+            Category(name="Работа", user_id=db_user.id),
+            Category(name="Учеба", user_id=db_user.id),
+            Category(name="Отдых", user_id=db_user.id),
+            Category(name="Спорт", user_id=db_user.id),
+            Category(name="Другое", user_id=db_user.id)
+        ]
+        db.session.add_all(default_categories)
+        db.session.commit()
     
-    # Создаем кнопку для веб-приложения
-    webapp_url = os.getenv('WEBAPP_URL', 'https://pixel-time-tracker.onrender.com')
-    user_data = {
-        'id': user.id,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'username': user.username,
-        'language_code': user.language_code,
-        'is_premium': user.is_premium if hasattr(user, 'is_premium') else False,
-        'allows_write_to_pm': user.allows_write_to_pm if hasattr(user, 'allows_write_to_pm') else False,
-        'photo_url': user.photo_url if hasattr(user, 'photo_url') else None
-    }
-    webapp_url = f"{webapp_url}?user={json.dumps(user_data)}"
-    
-    webapp_button = KeyboardButton(
-        text="Открыть трекер ⏱",
-        web_app=WebAppInfo(url=webapp_url)
+    await update.message.reply_text(
+        f"Привет, {user.first_name}! Я бот для отслеживания времени. "
+        "Используйте /help для просмотра доступных команд."
     )
-    keyboard = ReplyKeyboardMarkup([[webapp_button]], resize_keyboard=True)
-    
-    welcome_text = (
-        f"Привет, {user.first_name}! 👋\n\n"
-        "Я помогу тебе отслеживать время и быть продуктивнее. "
-        "Используй кнопку ниже, чтобы открыть трекер времени."
-    )
-    
-    await update.message.reply_text(welcome_text, reply_markup=keyboard)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /help"""
@@ -645,6 +635,52 @@ def update_break_reminder():
     except Exception as e:
         logger.error(f"Error in update_break_reminder: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@with_app_context
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data.startswith("start_activity_"):
+        category_id = int(query.data.split("_")[2])
+        category = Category.query.get(category_id)
+        
+        if not category:
+            await query.message.reply_text("Категория не найдена")
+            return
+        
+        # Создаем новую активность
+        activity = Activity(
+            name=f"Активность в категории {category.name}",
+            category_id=category_id,
+            user_id=category.user_id,
+            start_time=datetime.now(pytz.UTC)
+        )
+        db.session.add(activity)
+        db.session.commit()
+        
+        await query.message.reply_text(
+            f"Начата новая активность в категории {category.name}"
+        )
+    
+    elif query.data.startswith("stop_activity_"):
+        activity_id = int(query.data.split("_")[2])
+        activity = Activity.query.get(activity_id)
+        
+        if not activity:
+            await query.message.reply_text("Активность не найдена")
+            return
+        
+        activity.end_time = datetime.now(pytz.UTC)
+        db.session.commit()
+        
+        duration = activity.end_time - activity.start_time
+        hours = duration.total_seconds() / 3600
+        
+        await query.message.reply_text(
+            f"Активность '{activity.name}' завершена.\n"
+            f"Продолжительность: {hours:.2f} часов"
+        )
 
 def run_flask():
     """Запуск Flask приложения"""
