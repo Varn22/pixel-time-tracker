@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "pip install --upgrade pip && pip install -r requirements.txt"
 
 [deploy]
-startCommand = "flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && python bot.py"
+startCommand = "python bot.py"
 healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
@@ -19,8 +19,4 @@ PYTHONIOENCODING = "utf-8"
 PYTHONASYNCIODEBUG = "1"
 PYTHONTRACEMALLOC = "1"
 PYTHONFAULTHANDLER = "1"
-PORT = "8000"
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/railway"
-FLASK_APP = "app.py"
-FLASK_ENV = "production"
-FLASK_DEBUG = "0" 
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/railway" 
