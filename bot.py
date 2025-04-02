@@ -25,8 +25,14 @@ def signal_handler(signum, frame):
 def main():
     try:
         # Проверяем наличие токена бота
-        if not os.getenv('TELEGRAM_BOT_TOKEN'):
+        token = os.getenv('TELEGRAM_BOT_TOKEN')
+        if not token:
             logger.error("TELEGRAM_BOT_TOKEN not found in environment variables")
+            sys.exit(1)
+            
+        # Проверяем формат токена
+        if not token.count(':') == 1:
+            logger.error("Invalid token format. Token should be in format '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'")
             sys.exit(1)
             
         # Регистрируем обработчики сигналов
@@ -45,6 +51,8 @@ def main():
         )
     except Exception as e:
         logger.error(f"Error running bot: {str(e)}")
+        if "401 Unauthorized" in str(e):
+            logger.error("Bot token is invalid or has been revoked. Please check your TELEGRAM_BOT_TOKEN environment variable.")
         sys.exit(1)
 
 if __name__ == '__main__':
