@@ -5,7 +5,7 @@ buildCommand = "pip install --upgrade pip && pip install -r requirements.txt"
 [deploy]
 startCommand = "python bot.py"
 healthcheckPath = "/"
-healthcheckTimeout = 300
+healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 
@@ -19,4 +19,5 @@ PYTHONIOENCODING = "utf-8"
 PYTHONASYNCIODEBUG = "1"
 PYTHONTRACEMALLOC = "1"
 PYTHONFAULTHANDLER = "1"
+PORT = "8000"
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/railway" 
