@@ -48,8 +48,23 @@ if database_url:
 db = SQLAlchemy(app)
 
 # Инициализация бота
-bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
-application = Application.builder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build()
+def init_bot():
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not token:
+        raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
+        
+    application = Application.builder().token(token).build()
+    
+    # Добавляем обработчики команд
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("stats", stats_command))
+    application.add_handler(CommandHandler("settings", settings_command))
+    
+    return application
+
+# Создаем экземпляр бота
+application = init_bot()
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -253,12 +268,6 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     await update.message.reply_text(settings_text, parse_mode='Markdown')
-
-# Регистрация обработчиков команд
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CommandHandler("help", help_command))
-application.add_handler(CommandHandler("stats", stats_command))
-application.add_handler(CommandHandler("settings", settings_command))
 
 @app.route('/')
 def index():

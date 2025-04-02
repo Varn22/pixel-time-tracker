@@ -46,9 +46,8 @@ services:
         value: true
       - key: LOG_LEVEL
         value: INFO
-    healthCheckPath: /health
-    autoDeploy: true
     plan: free
+    autoDeploy: true
 
 databases:
   - name: pixel_tracker_db
