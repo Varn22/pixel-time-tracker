@@ -1,15 +1,17 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, current_app
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from datetime import datetime, timedelta
 import pytz
 from dotenv import load_dotenv
 import os
-from telegram import Bot, Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram import Bot, Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 import asyncio
 import threading
 import json
 import logging
+from functools import wraps
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +48,7 @@ if database_url:
     }
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 # Обработчики команд Telegram
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
