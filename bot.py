@@ -7,6 +7,8 @@ import sys
 from telegram.ext import ApplicationBuilder
 from flask import Flask
 import threading
+import atexit
+import fcntl
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -28,6 +30,14 @@ def health_check():
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8000)))
 
+def cleanup_lock(lock_file):
+    """Очистка блокировки при выходе"""
+    try:
+        lock_file.close()
+        os.remove('/tmp/bot.lock')
+    except:
+        pass
+
 def main():
     try:
         # Проверяем наличие токена бота
@@ -45,6 +55,17 @@ def main():
         bot_id = token.split(':')[0]
         logger.info(f"Bot ID: {bot_id}")
         logger.info("Token format is valid")
+
+        # Создаем файл блокировки
+        lock_file = open('/tmp/bot.lock', 'w')
+        try:
+            fcntl.lockf(lock_file, fcntl.F_TLOCK, 0)
+        except IOError:
+            logger.error("Another bot instance is already running")
+            sys.exit(1)
+
+        # Регистрируем очистку блокировки при выходе
+        atexit.register(cleanup_lock, lock_file)
             
         logger.info("Starting Telegram bot...")
         
