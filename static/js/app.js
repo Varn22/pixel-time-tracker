@@ -13,12 +13,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Получаем данные пользователя
         currentUser = tg.initDataUnsafe.user;
+        console.log('Initial user data:', currentUser);
+        
         if (!currentUser) {
             throw new Error('No user data available');
         }
         
         // Загружаем данные пользователя
         await loadUserData();
+        console.log('Updated user data:', currentUser);
         
         // Загружаем категории
         await loadCategories();
@@ -40,11 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Загрузка данных пользователя
 async function loadUserData() {
     try {
-        const response = await fetch(`/api/user?user=${JSON.stringify(currentUser)}`);
+        console.log('Loading user data for:', currentUser);
+        const response = await fetch(`/api/user?user=${encodeURIComponent(JSON.stringify(currentUser))}`);
         if (!response.ok) {
             throw new Error('Failed to load user data');
         }
         const userData = await response.json();
+        console.log('Received user data:', userData);
         currentUser = { ...currentUser, ...userData };
         updateUserInterface();
     } catch (error) {
@@ -72,7 +77,7 @@ async function loadCategories() {
 // Загрузка статистики
 async function loadStats() {
     try {
-        const response = await fetch(`/api/stats/daily?user=${JSON.stringify(currentUser)}`);
+        const response = await fetch(`/api/stats/daily?user=${encodeURIComponent(JSON.stringify({ id: currentUser.telegram_id }))}`);
         if (!response.ok) {
             throw new Error('Failed to load stats');
         }
@@ -197,23 +202,19 @@ function updateCategoriesList(categories) {
 // Обновление статистики
 function updateStats(stats) {
     const totalTimeElement = document.getElementById('totalTime');
-    const categoriesList = document.getElementById('categoriesList');
+    const totalTasksElement = document.getElementById('totalTasks');
+    const productivityElement = document.getElementById('productivity');
     
     if (totalTimeElement) {
-        totalTimeElement.textContent = `${Math.round(stats.total_time)} мин`;
+        totalTimeElement.textContent = `${Math.round(stats.total_time / 60)} мин`;
     }
     
-    if (categoriesList) {
-        categoriesList.innerHTML = '';
-        Object.entries(stats.categories).forEach(([category, time]) => {
-            const item = document.createElement('div');
-            item.className = 'category-item';
-            item.innerHTML = `
-                <span class="category-name">${category}</span>
-                <span class="category-time">${Math.round(time)} мин</span>
-            `;
-            categoriesList.appendChild(item);
-        });
+    if (totalTasksElement) {
+        totalTasksElement.textContent = stats.total_tasks;
+    }
+    
+    if (productivityElement) {
+        productivityElement.textContent = `${stats.productivity}/5`;
     }
 }
 
