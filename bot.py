@@ -5,6 +5,8 @@ import os
 from dotenv import load_dotenv
 import sys
 import signal
+import asyncio
+from telegram.ext import ApplicationBuilder
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -22,7 +24,7 @@ def signal_handler(signum, frame):
     application.stop()
     sys.exit(0)
 
-def main():
+async def main():
     try:
         # Проверяем наличие токена бота
         token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -45,15 +47,24 @@ def main():
         signal.signal(signal.SIGTERM, signal_handler)
             
         logger.info("Starting Telegram bot...")
+        
+        # Настраиваем таймауты через ApplicationBuilder
+        builder = ApplicationBuilder().token(token)
+        builder.get_updates_read_timeout(30)
+        builder.get_updates_write_timeout(30)
+        builder.get_updates_connect_timeout(30)
+        builder.get_updates_pool_timeout(30)
+        
         # Запускаем бота с обработкой ошибок
-        application.run_polling(
+        await application.initialize()
+        await application.start()
+        await application.run_polling(
             drop_pending_updates=True,
-            allowed_updates=Update.ALL_TYPES,
-            read_timeout=30,
-            write_timeout=30,
-            connect_timeout=30,
-            pool_timeout=30
+            allowed_updates=Update.ALL_TYPES
         )
+    except asyncio.TimeoutError:
+        logger.error("Connection to Telegram API timed out. Please check your internet connection.")
+        sys.exit(1)
     except Exception as e:
         logger.error(f"Error running bot: {str(e)}")
         if "401 Unauthorized" in str(e):
@@ -62,4 +73,4 @@ def main():
         sys.exit(1)
 
 if __name__ == '__main__':
-    main() 
+    asyncio.run(main()) 
