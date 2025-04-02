@@ -9,6 +9,7 @@ from flask import Flask
 import threading
 import atexit
 from waitress import serve
+import time
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -30,6 +31,31 @@ def health_check():
 def run_flask():
     port = int(os.getenv('PORT', 8000))
     serve(app, host='0.0.0.0', port=port)
+
+def is_bot_running():
+    """Проверяет, запущен ли уже бот"""
+    lock_file = '/tmp/bot.lock'
+    if not os.path.exists(lock_file):
+        return False
+        
+    try:
+        with open(lock_file, 'r') as f:
+            pid = int(f.read().strip())
+        # Проверяем, существует ли процесс
+        os.kill(pid, 0)
+        return True
+    except (ValueError, ProcessLookupError):
+        # Если процесс не существует, удаляем файл блокировки
+        try:
+            os.remove(lock_file)
+        except:
+            pass
+        return False
+
+def create_lock():
+    """Создает файл блокировки"""
+    with open('/tmp/bot.lock', 'w') as f:
+        f.write(str(os.getpid()))
 
 def cleanup_lock():
     """Очистка блокировки при выходе"""
@@ -58,13 +84,12 @@ def main():
         logger.info("Token format is valid")
 
         # Проверяем, не запущен ли уже бот
-        if os.path.exists('/tmp/bot.lock'):
+        if is_bot_running():
             logger.error("Another bot instance is already running")
             sys.exit(1)
             
         # Создаем файл блокировки
-        with open('/tmp/bot.lock', 'w') as f:
-            f.write(str(os.getpid()))
+        create_lock()
             
         # Регистрируем очистку блокировки при выходе
         atexit.register(cleanup_lock)
@@ -93,6 +118,7 @@ def main():
         if "401 Unauthorized" in str(e):
             logger.error("Bot token is invalid or has been revoked. Please check your TELEGRAM_BOT_TOKEN environment variable.")
             logger.error("Make sure you have copied the token correctly from BotFather and it is set in Railway variables.")
+        cleanup_lock()
         sys.exit(1)
 
 if __name__ == '__main__':
