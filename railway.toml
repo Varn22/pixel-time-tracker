@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "pip install --upgrade pip && pip install -r requirements.txt"
 
 [deploy]
-startCommand = "python bot.py"
+startCommand = "flask db upgrade && python bot.py"
 healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
