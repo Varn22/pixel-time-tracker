@@ -171,6 +171,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Создаем кнопку для веб-приложения
     webapp_url = os.getenv('WEBAPP_URL', 'https://pixel-time-tracker.onrender.com')
+    user_data = {
+        'id': user.id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'username': user.username,
+        'language_code': user.language_code,
+        'is_premium': user.is_premium if hasattr(user, 'is_premium') else False,
+        'allows_write_to_pm': user.allows_write_to_pm if hasattr(user, 'allows_write_to_pm') else False,
+        'photo_url': user.photo_url if hasattr(user, 'photo_url') else None
+    }
+    webapp_url = f"{webapp_url}?user={json.dumps(user_data)}"
+    
     webapp_button = KeyboardButton(
         text="Открыть трекер ⏱",
         web_app=WebAppInfo(url=webapp_url)

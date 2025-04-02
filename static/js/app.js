@@ -9,11 +9,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Инициализируем Telegram WebApp
         tg.expand();
-        tg.enableClosingConfirmation();
         
         // Получаем данные пользователя
         currentUser = tg.initDataUnsafe.user;
         console.log('Initial user data:', currentUser);
+        
+        if (!currentUser) {
+            // Если данные пользователя не доступны, пробуем получить их из URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const userData = urlParams.get('user');
+            if (userData) {
+                try {
+                    currentUser = JSON.parse(decodeURIComponent(userData));
+                    console.log('User data from URL:', currentUser);
+                } catch (e) {
+                    console.error('Error parsing user data from URL:', e);
+                }
+            }
+        }
         
         if (!currentUser) {
             throw new Error('No user data available');
