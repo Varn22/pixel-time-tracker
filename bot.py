@@ -8,6 +8,7 @@ from telegram.ext import ApplicationBuilder
 from flask import Flask
 import threading
 import atexit
+from waitress import serve
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -27,7 +28,8 @@ def health_check():
     return 'OK', 200
 
 def run_flask():
-    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8000)))
+    port = int(os.getenv('PORT', 8000))
+    serve(app, host='0.0.0.0', port=port)
 
 def cleanup_lock():
     """Очистка блокировки при выходе"""
