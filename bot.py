@@ -1,6 +1,11 @@
 from app import application
+from telegram import Update
 import logging
 import os
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(
@@ -9,8 +14,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-if __name__ == '__main__':
+def main():
     try:
+        # Проверяем наличие токена бота
+        if not os.getenv('TELEGRAM_BOT_TOKEN'):
+            raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
+            
         logger.info("Starting Telegram bot...")
         # Запускаем бота с обработкой ошибок
         application.run_polling(
@@ -23,4 +32,7 @@ if __name__ == '__main__':
         )
     except Exception as e:
         logger.error(f"Error running bot: {str(e)}")
-        raise 
+        raise
+
+if __name__ == '__main__':
+    main() 
