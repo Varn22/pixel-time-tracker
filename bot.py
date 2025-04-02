@@ -18,11 +18,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def signal_handler(signum, frame):
+# Глобальная переменная для хранения задачи
+bot_task = None
+
+async def shutdown(signal, loop):
+    """Корректное завершение бота"""
+    logger.info(f"Received exit signal {signal.name}...")
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    [task.cancel() for task in tasks]
+    
+    logger.info(f"Cancelling {len(tasks)} outstanding tasks")
+    await asyncio.gather(*tasks, return_exceptions=True)
+    
+    loop.stop()
+
+def handle_signal(signum, frame):
     """Обработчик сигналов для корректного завершения"""
-    logger.info(f"Received signal {signum}")
-    application.stop()
-    sys.exit(0)
+    loop = asyncio.get_event_loop()
+    loop.create_task(shutdown(signal.Signals(signum), loop))
 
 async def main():
     try:
@@ -43,8 +56,9 @@ async def main():
         logger.info("Token format is valid")
             
         # Регистрируем обработчики сигналов
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+        loop = asyncio.get_event_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, lambda s=sig: handle_signal(s, None))
             
         logger.info("Starting Telegram bot...")
         
@@ -55,7 +69,7 @@ async def main():
         builder.get_updates_connect_timeout(30)
         builder.get_updates_pool_timeout(30)
         
-        # Запускаем бота с обработкой ошибок
+        # Запускаем бота
         await application.initialize()
         await application.start()
         await application.run_polling(
@@ -71,6 +85,16 @@ async def main():
             logger.error("Bot token is invalid or has been revoked. Please check your TELEGRAM_BOT_TOKEN environment variable.")
             logger.error("Make sure you have copied the token correctly from BotFather and it is set in Railway variables.")
         sys.exit(1)
+    finally:
+        # Корректное завершение
+        await application.stop()
+        await application.shutdown()
 
 if __name__ == '__main__':
-    asyncio.run(main()) 
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user")
+    except Exception as e:
+        logger.error(f"Fatal error: {str(e)}")
+        sys.exit(1) 
