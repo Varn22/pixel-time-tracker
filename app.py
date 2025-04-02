@@ -47,6 +47,108 @@ if database_url:
 
 db = SQLAlchemy(app)
 
+# Обработчики команд Telegram
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /start"""
+    user = update.effective_user
+    
+    # Создаем или получаем пользователя
+    db_user = User.query.filter_by(telegram_id=user.id).first()
+    if not db_user:
+        db_user = User(
+            telegram_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name
+        )
+        db.session.add(db_user)
+        db.session.commit()
+    
+    # Создаем кнопку для веб-приложения
+    webapp_url = os.getenv('WEBAPP_URL', 'https://pixel-time-tracker.onrender.com')
+    user_data = {
+        'id': user.id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'username': user.username,
+        'language_code': user.language_code,
+        'is_premium': user.is_premium if hasattr(user, 'is_premium') else False,
+        'allows_write_to_pm': user.allows_write_to_pm if hasattr(user, 'allows_write_to_pm') else False,
+        'photo_url': user.photo_url if hasattr(user, 'photo_url') else None
+    }
+    webapp_url = f"{webapp_url}?user={json.dumps(user_data)}"
+    
+    webapp_button = KeyboardButton(
+        text="Открыть трекер ⏱",
+        web_app=WebAppInfo(url=webapp_url)
+    )
+    keyboard = ReplyKeyboardMarkup([[webapp_button]], resize_keyboard=True)
+    
+    welcome_text = (
+        f"Привет, {user.first_name}! 👋\n\n"
+        "Я помогу тебе отслеживать время и быть продуктивнее. "
+        "Используй кнопку ниже, чтобы открыть трекер времени."
+    )
+    
+    await update.message.reply_text(welcome_text, reply_markup=keyboard)
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /help"""
+    help_text = (
+        "🔍 *Доступные команды:*\n\n"
+        "/start - Начать работу с ботом\n"
+        "/stats - Показать статистику\n"
+        "/profile - Информация о профиле\n"
+        "/settings - Настройки уведомлений\n\n"
+        "📱 Используйте кнопку 'Открыть трекер' для доступа к основному интерфейсу."
+    )
+    await update.message.reply_text(help_text, parse_mode='Markdown')
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /stats"""
+    user = User.query.filter_by(telegram_id=update.effective_user.id).first()
+    if not user:
+        await update.message.reply_text("Пользователь не найден. Используйте /start для начала работы.")
+        return
+    
+    # Получаем статистику за сегодня
+    today = datetime.now(pytz.UTC).date()
+    today_activities = Activity.query.filter(
+        Activity.user_id == user.id,
+        db.func.date(Activity.start_time) == today
+    ).all()
+    
+    total_today = sum(activity.duration or 0 for activity in today_activities) // 60
+    
+    stats_text = (
+        f"📊 *Статистика за сегодня:*\n\n"
+        f"⏱ Общее время: {total_today} минут\n"
+        f"📝 Количество активностей: {len(today_activities)}\n"
+        f"🎯 Цель на день: {user.daily_goal} минут\n"
+        f"✨ Текущий уровень: {user.level}\n"
+        f"⭐️ Опыт: {user.xp} XP"
+    )
+    
+    await update.message.reply_text(stats_text, parse_mode='Markdown')
+
+async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /settings"""
+    user = User.query.filter_by(telegram_id=update.effective_user.id).first()
+    if not user:
+        await update.message.reply_text("Пользователь не найден. Используйте /start для начала работы.")
+        return
+    
+    settings_text = (
+        f"⚙️ *Текущие настройки:*\n\n"
+        f"🔔 Уведомления: {'включены' if user.notifications else 'выключены'}\n"
+        f"🎯 Цель на день: {user.daily_goal} минут\n"
+        f"⏰ Напоминание о перерыве: каждые {user.break_reminder} минут\n"
+        f"🎨 Тема: {user.theme}\n\n"
+        "Для изменения настроек используйте веб-интерфейс."
+    )
+    
+    await update.message.reply_text(settings_text, parse_mode='Markdown')
+
 # Инициализация бота
 def init_bot():
     token = os.getenv('TELEGRAM_BOT_TOKEN')
@@ -166,108 +268,6 @@ def init_db():
             # В Production режиме не прерываем запуск приложения из-за ошибки БД
             if os.getenv('FLASK_ENV') != 'production':
                 raise
-
-# Обработчики команд Telegram
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /start"""
-    user = update.effective_user
-    
-    # Создаем или получаем пользователя
-    db_user = User.query.filter_by(telegram_id=user.id).first()
-    if not db_user:
-        db_user = User(
-            telegram_id=user.id,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name
-        )
-        db.session.add(db_user)
-        db.session.commit()
-    
-    # Создаем кнопку для веб-приложения
-    webapp_url = os.getenv('WEBAPP_URL', 'https://pixel-time-tracker.onrender.com')
-    user_data = {
-        'id': user.id,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'username': user.username,
-        'language_code': user.language_code,
-        'is_premium': user.is_premium if hasattr(user, 'is_premium') else False,
-        'allows_write_to_pm': user.allows_write_to_pm if hasattr(user, 'allows_write_to_pm') else False,
-        'photo_url': user.photo_url if hasattr(user, 'photo_url') else None
-    }
-    webapp_url = f"{webapp_url}?user={json.dumps(user_data)}"
-    
-    webapp_button = KeyboardButton(
-        text="Открыть трекер ⏱",
-        web_app=WebAppInfo(url=webapp_url)
-    )
-    keyboard = ReplyKeyboardMarkup([[webapp_button]], resize_keyboard=True)
-    
-    welcome_text = (
-        f"Привет, {user.first_name}! 👋\n\n"
-        "Я помогу тебе отслеживать время и быть продуктивнее. "
-        "Используй кнопку ниже, чтобы открыть трекер времени."
-    )
-    
-    await update.message.reply_text(welcome_text, reply_markup=keyboard)
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /help"""
-    help_text = (
-        "🔍 *Доступные команды:*\n\n"
-        "/start - Начать работу с ботом\n"
-        "/stats - Показать статистику\n"
-        "/profile - Информация о профиле\n"
-        "/settings - Настройки уведомлений\n\n"
-        "📱 Используйте кнопку 'Открыть трекер' для доступа к основному интерфейсу."
-    )
-    await update.message.reply_text(help_text, parse_mode='Markdown')
-
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /stats"""
-    user = User.query.filter_by(telegram_id=update.effective_user.id).first()
-    if not user:
-        await update.message.reply_text("Пользователь не найден. Используйте /start для начала работы.")
-        return
-    
-    # Получаем статистику за сегодня
-    today = datetime.now(pytz.UTC).date()
-    today_activities = Activity.query.filter(
-        Activity.user_id == user.id,
-        db.func.date(Activity.start_time) == today
-    ).all()
-    
-    total_today = sum(activity.duration or 0 for activity in today_activities) // 60
-    
-    stats_text = (
-        f"📊 *Статистика за сегодня:*\n\n"
-        f"⏱ Общее время: {total_today} минут\n"
-        f"📝 Количество активностей: {len(today_activities)}\n"
-        f"🎯 Цель на день: {user.daily_goal} минут\n"
-        f"✨ Текущий уровень: {user.level}\n"
-        f"⭐️ Опыт: {user.xp} XP"
-    )
-    
-    await update.message.reply_text(stats_text, parse_mode='Markdown')
-
-async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработчик команды /settings"""
-    user = User.query.filter_by(telegram_id=update.effective_user.id).first()
-    if not user:
-        await update.message.reply_text("Пользователь не найден. Используйте /start для начала работы.")
-        return
-    
-    settings_text = (
-        f"⚙️ *Текущие настройки:*\n\n"
-        f"🔔 Уведомления: {'включены' if user.notifications else 'выключены'}\n"
-        f"🎯 Цель на день: {user.daily_goal} минут\n"
-        f"⏰ Напоминание о перерыве: каждые {user.break_reminder} минут\n"
-        f"🎨 Тема: {user.theme}\n\n"
-        "Для изменения настроек используйте веб-интерфейс."
-    )
-    
-    await update.message.reply_text(settings_text, parse_mode='Markdown')
 
 @app.route('/')
 def index():
