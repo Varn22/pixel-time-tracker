@@ -17,7 +17,11 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, 
+    static_folder='static',
+    static_url_path='/static',
+    template_folder='templates'
+)
 
 # Конфигурация базы данных
 database_url = os.getenv('DATABASE_URL')
@@ -341,10 +345,11 @@ def get_daily_stats():
         today = datetime.now(pytz.UTC).date()
         activities = Activity.query.filter(
             Activity.user_id == db_user.id,
-            Activity.date == today
+            db.func.date(Activity.start_time) == today
         ).all()
         
-        total_time = sum(activity.duration for activity in activities)
+        total_time = sum((activity.end_time - activity.start_time).total_seconds() / 60 
+                        for activity in activities if activity.end_time) if activities else 0
         total_tasks = len(activities)
         productivity = sum(activity.productivity for activity in activities) / total_tasks if total_tasks > 0 else 0
         
