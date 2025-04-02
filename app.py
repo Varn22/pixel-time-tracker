@@ -318,32 +318,6 @@ def get_user():
         logger.error(f"Unexpected error in get_user: {str(e)}")
         return jsonify({'error': 'An unexpected error occurred'}), 500
 
-@app.route('/api/stats/categories', methods=['GET'])
-def get_categories():
-    try:
-        user_data = request.args.get('user')
-        if not user_data:
-            return jsonify({'error': 'No user data'}), 400
-            
-        user = json.loads(user_data)
-        telegram_id = user.get('id')
-        
-        if not telegram_id:
-            return jsonify({'error': 'No Telegram ID'}), 400
-        
-        db_user = User.query.filter_by(telegram_id=telegram_id).first()
-        if not db_user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        categories = Category.query.filter_by(user_id=db_user.id).all()
-        return jsonify([{
-            'id': cat.id,
-            'name': cat.name,
-            'created_at': cat.created_at.isoformat()
-        } for cat in categories])
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/api/stats/daily', methods=['GET'])
 def get_daily_stats():
     try:
@@ -351,38 +325,80 @@ def get_daily_stats():
         if not user_data:
             return jsonify({'error': 'No user data'}), 400
             
-        user = json.loads(user_data)
+        try:
+            user = json.loads(user_data)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+            
         telegram_id = user.get('id')
-        
         if not telegram_id:
             return jsonify({'error': 'No Telegram ID'}), 400
-        
+            
         db_user = User.query.filter_by(telegram_id=telegram_id).first()
         if not db_user:
             return jsonify({'error': 'User not found'}), 404
-        
+            
         today = datetime.now(pytz.UTC).date()
         activities = Activity.query.filter(
             Activity.user_id == db_user.id,
-            db.func.date(Activity.start_time) == today
+            Activity.date == today
         ).all()
         
-        stats = {
-            'total_time': 0,
-            'categories': {}
-        }
+        total_time = sum(activity.duration for activity in activities)
+        total_tasks = len(activities)
+        productivity = sum(activity.productivity for activity in activities) / total_tasks if total_tasks > 0 else 0
         
-        for activity in activities:
-            if activity.end_time:
-                duration = (activity.end_time - activity.start_time).total_seconds() / 60
-                stats['total_time'] += duration
-                category_name = activity.category.name
-                if category_name not in stats['categories']:
-                    stats['categories'][category_name] = 0
-                stats['categories'][category_name] += duration
+        return jsonify({
+            'total_time': total_time,
+            'total_tasks': total_tasks,
+            'productivity': round(productivity, 1)
+        })
+    except Exception as e:
+        logger.error(f"Error in get_daily_stats: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stats/categories', methods=['GET'])
+def get_category_stats():
+    try:
+        user_data = request.args.get('user')
+        if not user_data:
+            return jsonify({'error': 'No user data'}), 400
+            
+        try:
+            user = json.loads(user_data)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+            
+        telegram_id = user.get('id')
+        if not telegram_id:
+            return jsonify({'error': 'No Telegram ID'}), 400
+            
+        db_user = User.query.filter_by(telegram_id=telegram_id).first()
+        if not db_user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        categories = Category.query.filter_by(user_id=db_user.id).all()
+        stats = []
+        
+        for category in categories:
+            activities = Activity.query.filter_by(
+                user_id=db_user.id,
+                category_id=category.id
+            ).all()
+            
+            total_time = sum(activity.duration for activity in activities)
+            total_tasks = len(activities)
+            
+            stats.append({
+                'id': category.id,
+                'name': category.name,
+                'total_time': total_time,
+                'total_tasks': total_tasks
+            })
         
         return jsonify(stats)
     except Exception as e:
+        logger.error(f"Error in get_category_stats: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/activity/start', methods=['POST'])
